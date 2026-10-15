@@ -3,6 +3,7 @@ import ForceGraph3D, { ForceGraph3DInstance } from "3d-force-graph";
 import * as THREE from "three";
 import { useGraphStore } from "../../stores/graph-store.js";
 import { create3DNodeObject } from "./node-3d-factory.js";
+import { filterGraphData } from "../../lib/filter-helper.js";
 import type { GraphNode, GraphLink } from "@orbit/core";
 
 export const Graph3D: React.FC = () => {
@@ -20,46 +21,9 @@ export const Graph3D: React.FC = () => {
     hoverNode,
   } = useGraphStore();
 
-  // Filter nodes & links based on search / category filter
-  const filteredNodes = React.useMemo(() => {
-    return nodes.filter((n) => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matches =
-          n.name.toLowerCase().includes(q) ||
-          n.type.toLowerCase().includes(q) ||
-          n.arn.toLowerCase().includes(q);
-        if (!matches) return false;
-      }
-
-      if (filterCategory === "compute") {
-        return n.type.startsWith("ec2:") || n.type.startsWith("lambda:");
-      }
-      if (filterCategory === "network") {
-        return n.type.startsWith("vpc:") || n.type.startsWith("elb:");
-      }
-      if (filterCategory === "database") {
-        return n.type.startsWith("rds:");
-      }
-      if (filterCategory === "storage") {
-        return n.type.startsWith("s3:");
-      }
-      if (filterCategory === "security") {
-        return n.type.includes("security-group") || n.type.startsWith("iam:");
-      }
-      return true;
-    });
-  }, [nodes, filterCategory, searchQuery]);
-
-  const activeNodeIds = React.useMemo(() => new Set(filteredNodes.map((n) => n.id)), [filteredNodes]);
-
-  const filteredLinks = React.useMemo(() => {
-    return links.filter(
-      (l) =>
-        activeNodeIds.has(typeof l.source === "object" ? (l.source as GraphNode).id : (l.source as string)) &&
-        activeNodeIds.has(typeof l.target === "object" ? (l.target as GraphNode).id : (l.target as string))
-    );
-  }, [links, activeNodeIds]);
+  const { filteredNodes, filteredLinks } = React.useMemo(() => {
+    return filterGraphData(nodes, links, filterCategory, searchQuery);
+  }, [nodes, links, filterCategory, searchQuery]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -102,23 +66,37 @@ export const Graph3D: React.FC = () => {
       .onBackgroundClick(() => {
         selectNode(null);
       })
-      // Link styling & particle animations (energy packets moving between resources)
-      .linkDirectionalParticles(3)
-      .linkDirectionalParticleSpeed(0.006)
-      .linkDirectionalParticleWidth(2.5)
-      .linkDirectionalParticleColor(() => "#38bdf8")
+      // Link styling & animated traffic particles
+      .linkDirectionalParticles(4)
+      .linkDirectionalParticleSpeed(0.007)
+      .linkDirectionalParticleWidth(3.0)
+      .linkDirectionalParticleColor((link) => {
+        const gLink = link as unknown as GraphLink;
+        if (gLink.relationshipType === "contained-in") return "#a855f7"; // Purple network flow
+        if (gLink.relationshipType === "routes-to") return "#ff9900"; // Orange compute routing
+        if (gLink.relationshipType === "targets") return "#38bdf8"; // Blue database query
+        return "#10b981"; // Green storage transfer
+      })
       .linkColor((link) => {
         const gLink = link as unknown as GraphLink;
-        if (gLink.relationshipType === "contained-in") return "rgba(56, 189, 248, 0.25)";
-        if (gLink.relationshipType === "routes-to") return "rgba(168, 85, 247, 0.5)";
-        if (gLink.relationshipType === "targets") return "rgba(244, 63, 94, 0.5)";
-        return "rgba(148, 163, 184, 0.25)";
+        if (gLink.relationshipType === "contained-in") return "rgba(168, 85, 247, 0.3)";
+        if (gLink.relationshipType === "routes-to") return "rgba(255, 153, 0, 0.4)";
+        return "rgba(113, 113, 122, 0.35)";
       })
       .linkWidth((link) => {
         const gLink = link as unknown as GraphLink;
-        if (gLink.relationshipType === "routes-to") return 2;
-        return 1;
+        return gLink.relationshipType === "routes-to" ? 2.5 : 1.5;
       });
+
+    // Configure strong charge repulsion so 3D nodes spread out gracefully
+    const chargeForce = fg.d3Force("charge");
+    if (chargeForce && typeof chargeForce.strength === "function") {
+      chargeForce.strength(-700);
+    }
+    const linkForce = fg.d3Force("link");
+    if (linkForce && typeof linkForce.distance === "function") {
+      linkForce.distance(130);
+    }
 
     // Clean natural architectural lighting (no neon or sci-fi tints)
     const scene = fg.scene();
@@ -137,6 +115,9 @@ export const Graph3D: React.FC = () => {
     const grid = new THREE.GridHelper(800, 40, 0x27272a, 0x18181b);
     grid.position.y = -60;
     scene.add(grid);
+
+    // Set clean initial camera framing
+    fg.cameraPosition({ x: 0, y: 100, z: 320 }, { x: 0, y: 0, z: 0 }, 1000);
 
     graphRef.current = fg;
 
