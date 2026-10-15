@@ -5,10 +5,12 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@orbit/core": path.resolve(__dirname, "../core/src"),
-    },
+    alias: [
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
+      { find: "@orbit/core", replacement: path.resolve(__dirname, "../core/src") },
+      { find: /^three$/, replacement: path.resolve(__dirname, "../../node_modules/3d-force-graph/node_modules/three") },
+    ],
+    dedupe: ["three", "react", "react-dom"],
   },
   server: {
     port: 3000,

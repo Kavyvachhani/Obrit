@@ -119,6 +119,25 @@ export const Graph3D: React.FC = () => {
     // Set clean initial camera framing
     fg.cameraPosition({ x: 0, y: 100, z: 320 }, { x: 0, y: 0, z: 0 }, 1000);
 
+    // Ensure all 3D cards smoothly billboard towards the camera on camera movement
+    try {
+      const controls = (fg as any).controls();
+      if (controls && typeof controls.addEventListener === "function") {
+        controls.addEventListener("change", () => {
+          const camera = fg.camera();
+          if (camera) {
+            scene.traverse((obj: any) => {
+              if (obj.userData?.isBillboardCard) {
+                obj.quaternion.copy(camera.quaternion);
+              }
+            });
+          }
+        });
+      }
+    } catch {
+      // Pass if controls not available
+    }
+
     graphRef.current = fg;
 
     // Handle container resize

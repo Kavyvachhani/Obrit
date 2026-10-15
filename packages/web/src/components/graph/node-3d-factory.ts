@@ -318,18 +318,21 @@ export function create3DNodeObject(node: GraphNode, isSelected = false, isHovere
     textureCache.set(cacheKey, texture);
   }
 
-  // Realistic Billboard Sprite
-  const spriteMat = new THREE.SpriteMaterial({
+  // Realistic 3D Architectural Card Mesh (PlaneGeometry with double-sided material)
+  const scale = node.type === "vpc:vpc" ? 44 : node.type === "vpc:subnet" ? 38 : 32;
+  const geo = new THREE.PlaneGeometry(scale, scale / 3.2);
+  geo.computeBoundingSphere();
+
+  const mat = new THREE.MeshBasicMaterial({
     map: texture,
     transparent: true,
+    side: THREE.DoubleSide,
     depthWrite: false,
   });
 
-  const sprite = new THREE.Sprite(spriteMat);
-  // Aspect ratio 576 / 180 = 3.2
-  const scale = node.type === "vpc:vpc" ? 42 : node.type === "vpc:subnet" ? 36 : 30;
-  sprite.scale.set(scale, scale / 3.2, 1);
-  group.add(sprite);
+  const cardMesh = new THREE.Mesh(geo, mat);
+  cardMesh.userData = { isBillboardCard: true };
+  group.add(cardMesh);
 
   // If node is a VPC or Subnet, also render a subtle architectural ground perimeter
   if (node.type === "vpc:vpc") {
