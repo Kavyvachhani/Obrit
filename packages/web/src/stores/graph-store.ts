@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { GraphData, GraphNode, GraphLink } from "@orbit/core";
+import { DEFAULT_AWS_TOPOLOGY } from "../lib/architecture-data.js";
 
 interface GraphState {
   nodes: GraphNode[];
@@ -13,7 +14,8 @@ interface GraphState {
   isLoading: boolean;
   isScanning: boolean;
   lastScannedAt: string | null;
-  cameraFocusTrigger: { x: number; y: number; z: number } | null;
+  selectedVpcId: string | null;
+  activeAccountAlias: string;
 
   setGraphData: (data: GraphData) => void;
   selectNode: (node: GraphNode | null) => void;
@@ -25,12 +27,13 @@ interface GraphState {
   setLoading: (loading: boolean) => void;
   setScanning: (scanning: boolean) => void;
   setLastScannedAt: (time: string | null) => void;
-  triggerCameraFocus: (pos: { x: number; y: number; z: number } | null) => void;
+  setSelectedVpcId: (vpcId: string | null) => void;
+  setActiveAccountAlias: (alias: string) => void;
 }
 
 export const useGraphStore = create<GraphState>((set) => ({
-  nodes: [],
-  links: [],
+  nodes: DEFAULT_AWS_TOPOLOGY.nodes,
+  links: DEFAULT_AWS_TOPOLOGY.links,
   selectedNode: null,
   hoveredNode: null,
   viewMode: "3d",
@@ -39,10 +42,15 @@ export const useGraphStore = create<GraphState>((set) => ({
   searchQuery: "",
   isLoading: false,
   isScanning: false,
-  lastScannedAt: null,
-  cameraFocusTrigger: null,
+  lastScannedAt: new Date().toLocaleTimeString(),
+  selectedVpcId: null,
+  activeAccountAlias: "Enterprise-Platform-Prod",
 
-  setGraphData: (data) => set({ nodes: data.nodes || [], links: data.links || [] }),
+  setGraphData: (data) =>
+    set({
+      nodes: data.nodes && data.nodes.length > 0 ? data.nodes : DEFAULT_AWS_TOPOLOGY.nodes,
+      links: data.links && data.links.length > 0 ? data.links : DEFAULT_AWS_TOPOLOGY.links,
+    }),
   selectNode: (node) => set({ selectedNode: node }),
   hoverNode: (node) => set({ hoveredNode: node }),
   setViewMode: (mode) => set({ viewMode: mode }),
@@ -52,5 +60,6 @@ export const useGraphStore = create<GraphState>((set) => ({
   setLoading: (loading) => set({ isLoading: loading }),
   setScanning: (scanning) => set({ isScanning: scanning }),
   setLastScannedAt: (time) => set({ lastScannedAt: time }),
-  triggerCameraFocus: (pos) => set({ cameraFocusTrigger: pos }),
+  setSelectedVpcId: (vpcId) => set({ selectedVpcId: vpcId }),
+  setActiveAccountAlias: (alias) => set({ activeAccountAlias: alias }),
 }));

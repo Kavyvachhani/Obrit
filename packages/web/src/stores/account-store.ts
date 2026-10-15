@@ -36,14 +36,14 @@ export const useAccountStore = create<AccountState>((set, get) => ({
         set({
           accounts: [],
           activeAccountId: "",
-          isConnectModalOpen: true, // Prompt user to connect real AWS account
+          isConnectModalOpen: false,
         });
       }
     } catch {
       set({
         accounts: [],
         activeAccountId: "",
-        isConnectModalOpen: true,
+        isConnectModalOpen: false,
       });
     } finally {
       set({ isLoading: false });
@@ -60,7 +60,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
       set({
         accounts: remaining,
         activeAccountId: remaining[0]?.id || "",
-        isConnectModalOpen: remaining.length === 0,
+        isConnectModalOpen: false,
       });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : "Failed to delete account" });

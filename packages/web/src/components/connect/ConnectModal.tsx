@@ -90,14 +90,14 @@ export const ConnectModal: React.FC = () => {
         secretAccessKey: secretAccessKey.trim(),
       });
 
-      setScanStage("Discovering VPCs, Subnets, EC2, Lambdas, RDS & S3...");
+      setScanStage("Discovering entire AWS account: VPCs, Subnets, EC2, Lambdas, RDS & S3...");
       setScanning(true);
 
       const scanResult = await triggerScan(newAcc.id);
-      setScanStage(`Discovered ${scanResult.resourceCount} AWS resources. Building 3D graph...`);
+      setScanStage(`Discovered ${scanResult.resourceCount} AWS resources. Rendering topology...`);
 
       const graph = await fetchGraph(newAcc.id);
-      if (graph) {
+      if (graph && graph.nodes && graph.nodes.length > 0) {
         setGraphData(graph);
       }
 
@@ -109,7 +109,7 @@ export const ConnectModal: React.FC = () => {
         setConnectModalOpen(false);
         setSuccess(false);
         setScanning(false);
-      }, 1200);
+      }, 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to connect and scan AWS account.");
       setScanning(false);
@@ -119,107 +119,107 @@ export const ConnectModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg glass-panel rounded-3xl p-6 border border-sky-500/30 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-lg bg-[#121215] rounded-xl p-6 border border-[#27272a] shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto font-sans">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+        <div className="flex items-center justify-between border-b border-[#27272a] pb-3.5">
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 rounded-2xl bg-sky-500/10 border border-sky-500/30 text-sky-400">
-              <Key className="w-5 h-5" />
+            <div className="p-2 rounded-lg bg-zinc-800 text-amber-400 border border-zinc-700">
+              <Key className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Connect AWS Account</h2>
-              <p className="text-xs text-slate-400">Live Read-Only AWS Topology Visualizer</p>
+              <h2 className="text-sm font-semibold text-zinc-100">Connect AWS Account</h2>
+              <p className="text-xs text-zinc-400">Discover and visualize entire infrastructure in 3D</p>
             </div>
           </div>
           <button
             onClick={() => setConnectModalOpen(false)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Security Notice */}
-        <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-white/10 flex items-start space-x-3 text-xs text-slate-300">
+        <div className="p-3 rounded-lg bg-[#18181b] border border-[#27272a] flex items-start space-x-3 text-xs text-zinc-300">
           <Shield className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
           <div className="space-y-1">
             <p>
-              Orbit is strictly <strong>read-only</strong>. Credentials are encrypted on your local machine using{" "}
-              <span className="font-mono text-emerald-400">AES-256-GCM</span> and never sent off-system.
+              Orbit is strictly <strong>read-only</strong>. Credentials are saved locally with{" "}
+              <span className="font-mono text-emerald-400">AES-256-GCM</span> encryption and never sent off your system.
             </p>
             <button
               type="button"
               onClick={() => setShowPolicy(!showPolicy)}
-              className="text-sky-400 hover:text-sky-300 flex items-center space-x-1 font-medium pt-1"
+              className="text-amber-400 hover:text-amber-300 flex items-center space-x-1 font-medium pt-0.5"
             >
               <span>{showPolicy ? "Hide" : "View"} recommended IAM policy</span>
-              {showPolicy ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              {showPolicy ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </button>
           </div>
         </div>
 
         {/* Expandable IAM Policy Box */}
         {showPolicy && (
-          <div className="p-3 rounded-2xl bg-slate-950 border border-white/10 space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>Least-Privilege Policy:</span>
+          <div className="p-3 rounded-lg bg-[#0c0c0e] border border-[#27272a] space-y-2">
+            <div className="flex items-center justify-between text-xs text-zinc-400">
+              <span>Read-Only IAM Policy:</span>
               <button
                 type="button"
                 onClick={handleCopyPolicy}
-                className="flex items-center space-x-1 text-sky-400 hover:text-sky-300 font-mono text-[11px]"
+                className="flex items-center space-x-1 text-zinc-300 hover:text-white font-mono text-[11px]"
               >
-                {copiedPolicy ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                {copiedPolicy ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                 <span>{copiedPolicy ? "Copied" : "Copy Policy"}</span>
               </button>
             </div>
-            <pre className="font-mono text-[10px] text-sky-300/80 max-h-36 overflow-y-auto leading-relaxed select-text p-2 rounded-xl bg-slate-900/60 border border-white/5">
+            <pre className="font-mono text-[10px] text-zinc-300 max-h-36 overflow-y-auto leading-relaxed select-text p-2 rounded bg-[#16161a] border border-[#27272a]">
               {policyJson}
             </pre>
           </div>
         )}
 
         {error && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center space-x-2">
+          <div className="p-3 rounded-lg bg-red-950/40 border border-red-800 text-red-300 text-xs flex items-center space-x-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {scanStage && isSubmitting && (
-          <div className="p-3.5 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs flex items-center space-x-2.5 animate-pulse">
-            <div className="w-4 h-4 border-2 border-sky-400 border-t-transparent rounded-full animate-spin shrink-0" />
-            <span>{scanStage}</span>
+          <div className="p-3 rounded-lg bg-[#18181b] border border-[#27272a] text-zinc-200 text-xs flex items-center space-x-2.5">
+            <div className="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin shrink-0" />
+            <span className="font-mono text-[11px]">{scanStage}</span>
           </div>
         )}
 
         {success && (
-          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center space-x-2">
+          <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-800 text-emerald-300 text-xs flex items-center space-x-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>AWS Infrastructure mapped successfully! Rendering 3D cloud...</span>
+            <span>AWS Infrastructure mapped successfully! Rendering topology...</span>
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-300 block">Account / Environment Alias</label>
+        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+          <div className="space-y-1">
+            <label className="font-medium text-zinc-300 block">Account Alias</label>
             <input
               type="text"
               value={alias}
               onChange={(e) => setAlias(e.target.value)}
-              placeholder="e.g. Production-VPC-East"
-              className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-sky-400"
+              placeholder="e.g. Production-Main"
+              className="w-full bg-[#18181b] border border-[#27272a] rounded-md px-3 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 font-mono"
               required
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-300 block">Primary Region to Scan</label>
+          <div className="space-y-1">
+            <label className="font-medium text-zinc-300 block">Region to Scan</label>
             <select
               value={region}
               onChange={(e) => setRegion(e.target.value)}
-              className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-sky-400"
+              className="w-full bg-[#18181b] border border-[#27272a] rounded-md px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-zinc-500 font-mono"
             >
               {AWS_REGIONS.map((r) => (
                 <option key={r.value} value={r.value}>
@@ -229,38 +229,38 @@ export const ConnectModal: React.FC = () => {
             </select>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-300 block">AWS Access Key ID</label>
+          <div className="space-y-1">
+            <label className="font-medium text-zinc-300 block">AWS Access Key ID</label>
             <input
               type="text"
               value={accessKeyId}
               onChange={(e) => setAccessKeyId(e.target.value)}
               placeholder="AKIAIOSFODNN7EXAMPLE"
-              className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2 text-xs font-mono text-white placeholder:text-slate-500 focus:outline-none focus:border-sky-400"
+              className="w-full bg-[#18181b] border border-[#27272a] rounded-md px-3 py-1.5 text-xs font-mono text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
               required
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-300 block">AWS Secret Access Key</label>
+          <div className="space-y-1">
+            <label className="font-medium text-zinc-300 block">AWS Secret Access Key</label>
             <input
               type="password"
               value={secretAccessKey}
               onChange={(e) => setSecretAccessKey(e.target.value)}
               placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-              className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2 text-xs font-mono text-white placeholder:text-slate-500 focus:outline-none focus:border-sky-400"
+              className="w-full bg-[#18181b] border border-[#27272a] rounded-md px-3 py-1.5 text-xs font-mono text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
               required
             />
           </div>
 
-          <div className="pt-2 flex items-center justify-end">
+          <div className="pt-2">
             <button
               type="submit"
               disabled={isSubmitting || success}
-              className="w-full py-3 px-5 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-400 text-black font-semibold text-xs hover:shadow-glow transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
+              className="w-full py-2.5 px-4 rounded-md bg-zinc-100 text-zinc-950 font-semibold text-xs hover:bg-white transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
             >
-              <Shield className="w-4 h-4" />
-              <span>{isSubmitting ? "Scanning AWS Infrastructure..." : "Connect & Scan AWS Infrastructure"}</span>
+              <Shield className="w-3.5 h-3.5" />
+              <span>{isSubmitting ? "Discovering Account Resources..." : "Connect & Scan Entire Account"}</span>
             </button>
           </div>
         </form>

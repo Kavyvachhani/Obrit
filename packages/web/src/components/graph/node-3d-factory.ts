@@ -1,323 +1,360 @@
 import * as THREE from "three";
 import type { GraphNode } from "@orbit/core";
 
-// Cache geometries & materials for peak GPU performance
-const materialsCache = new Map<string, THREE.Material>();
+// Texture cache to prevent redundant canvas texture recreation
+const textureCache = new Map<string, THREE.CanvasTexture>();
 
-function getMaterial(color: number, opacity = 1.0, wireframe = false, emissiveIntensity = 0.4): THREE.MeshStandardMaterial {
-  const key = `${color}_${opacity}_${wireframe}_${emissiveIntensity}`;
-  if (!materialsCache.has(key)) {
-    materialsCache.set(
-      key,
-      new THREE.MeshStandardMaterial({
-        color,
-        emissive: color,
-        emissiveIntensity,
-        roughness: 0.25,
-        metalness: 0.65,
-        transparent: opacity < 1.0,
-        opacity,
-        wireframe,
-      })
-    );
+interface ServiceStyle {
+  color: string;
+  bgColor: string;
+  shortType: string;
+  iconType: "ec2" | "lambda" | "rds" | "s3" | "vpc" | "subnet" | "alb" | "igw" | "sg" | "default";
+}
+
+function getServiceStyle(type: string): ServiceStyle {
+  if (type.startsWith("ec2:instance")) {
+    return { color: "#ff9900", bgColor: "#7c2d12", shortType: "EC2 INSTANCE", iconType: "ec2" };
   }
-  return materialsCache.get(key) as THREE.MeshStandardMaterial;
+  if (type.startsWith("lambda:")) {
+    return { color: "#f59e0b", bgColor: "#78350f", shortType: "LAMBDA FUNCTION", iconType: "lambda" };
+  }
+  if (type.startsWith("rds:")) {
+    return { color: "#38bdf8", bgColor: "#0c4a6e", shortType: "RDS DATABASE", iconType: "rds" };
+  }
+  if (type.startsWith("s3:")) {
+    return { color: "#10b981", bgColor: "#064e3b", shortType: "S3 BUCKET", iconType: "s3" };
+  }
+  if (type === "vpc:vpc") {
+    return { color: "#a855f7", bgColor: "#581c87", shortType: "VPC NETWORK", iconType: "vpc" };
+  }
+  if (type === "vpc:subnet") {
+    return { color: "#06b6d4", bgColor: "#164e63", shortType: "SUBNET ZONE", iconType: "subnet" };
+  }
+  if (type.startsWith("elb:")) {
+    return { color: "#ec4899", bgColor: "#831843", shortType: "LOAD BALANCER", iconType: "alb" };
+  }
+  if (type.includes("gateway")) {
+    return { color: "#0ea5e9", bgColor: "#075985", shortType: "GATEWAY", iconType: "igw" };
+  }
+  if (type.includes("security-group")) {
+    return { color: "#ef4444", bgColor: "#7f1d1d", shortType: "SECURITY GROUP", iconType: "sg" };
+  }
+  return { color: "#a1a1aa", bgColor: "#27272a", shortType: "AWS RESOURCE", iconType: "default" };
+}
+
+function drawServiceIcon(
+  ctx: CanvasRenderingContext2D,
+  iconType: ServiceStyle["iconType"],
+  color: string,
+  x: number,
+  y: number,
+  size: number
+) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Icon Background Box
+  ctx.fillStyle = "rgba(24, 24, 27, 0.9)";
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    ctx.roundRect(0, 0, size, size, 12);
+  } else {
+    ctx.rect(0, 0, size, size);
+  }
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Internal Icon Graphics
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  const cx = size / 2;
+  const cy = size / 2;
+
+  switch (iconType) {
+    case "ec2": {
+      // Server Blade Rack Icon
+      const w = size * 0.58;
+      const h = size * 0.16;
+      for (let i = -1; i <= 1; i++) {
+        const top = cy + i * (h + 7) - h / 2;
+        ctx.strokeRect(cx - w / 2, top, w, h);
+        // Activity dots
+        ctx.beginPath();
+        ctx.arc(cx - w / 2 + 10, top + h / 2, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+
+    case "lambda": {
+      // Bold Lambda λ Symbol
+      ctx.font = `bold ${Math.round(size * 0.65)}px "Inter", "Segoe UI", sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("λ", cx, cy + 2);
+      break;
+    }
+
+    case "rds": {
+      // Cylindrical Multi-tier Database
+      const rw = size * 0.52;
+      const rh = size * 0.18;
+      for (let i = -1; i <= 1; i++) {
+        const top = cy + i * 16 - 10;
+        ctx.beginPath();
+        ctx.ellipse(cx, top, rw / 2, rh / 2, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      // Vertical cylinder edges
+      ctx.beginPath();
+      ctx.moveTo(cx - rw / 2, cy - 10);
+      ctx.lineTo(cx - rw / 2, cy + 18);
+      ctx.moveTo(cx + rw / 2, cy - 10);
+      ctx.lineTo(cx + rw / 2, cy + 18);
+      ctx.stroke();
+      break;
+    }
+
+    case "s3": {
+      // S3 Storage Bucket
+      const bw = size * 0.55;
+      const bh = size * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - bw / 2, cy - bh / 2 + 6);
+      ctx.lineTo(cx - bw / 2 + 5, cy + bh / 2);
+      ctx.lineTo(cx + bw / 2 - 5, cy + bh / 2);
+      ctx.lineTo(cx + bw / 2, cy - bh / 2 + 6);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Bucket handle
+      ctx.beginPath();
+      ctx.arc(cx, cy - bh / 2 + 6, bw / 3, Math.PI, 0, true);
+      ctx.stroke();
+      break;
+    }
+
+    case "vpc": {
+      // Cloud Silhouette
+      ctx.beginPath();
+      ctx.arc(cx - 10, cy + 2, 12, Math.PI * 0.5, Math.PI * 1.5);
+      ctx.arc(cx - 2, cy - 10, 14, Math.PI, Math.PI * 1.85);
+      ctx.arc(cx + 12, cy - 4, 12, Math.PI * 1.4, Math.PI * 0.3);
+      ctx.arc(cx + 4, cy + 8, 10, 0, Math.PI * 0.5);
+      ctx.closePath();
+      ctx.stroke();
+      break;
+    }
+
+    case "subnet": {
+      // Subnet Network Grid
+      const step = 14;
+      for (let ox = -step; ox <= step; ox += step) {
+        for (let oy = -step; oy <= step; oy += step) {
+          ctx.beginPath();
+          ctx.arc(cx + ox, cy + oy, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.strokeRect(cx - step - 4, cy - step - 4, step * 2 + 8, step * 2 + 8);
+      break;
+    }
+
+    case "alb": {
+      // Load Balancer Splitter Arrows
+      ctx.beginPath();
+      ctx.moveTo(cx - 16, cy);
+      ctx.lineTo(cx - 2, cy);
+      ctx.lineTo(cx + 14, cy - 14);
+      ctx.moveTo(cx - 2, cy);
+      ctx.lineTo(cx + 14, cy);
+      ctx.moveTo(cx - 2, cy);
+      ctx.lineTo(cx + 14, cy + 14);
+      ctx.stroke();
+      break;
+    }
+
+    case "igw": {
+      // Gateway Portal Arch
+      ctx.beginPath();
+      ctx.arc(cx, cy - 4, 16, Math.PI, 0, false);
+      ctx.lineTo(cx + 16, cy + 16);
+      ctx.lineTo(cx - 16, cy + 16);
+      ctx.closePath();
+      ctx.stroke();
+      break;
+    }
+
+    default: {
+      // Default Resource Hexagon
+      ctx.beginPath();
+      const r = size * 0.32;
+      for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI) / 3;
+        const px = cx + r * Math.cos(angle);
+        const py = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      break;
+    }
+  }
+
+  ctx.restore();
 }
 
 /**
- * Creates custom 3D models for each AWS resource type:
- * - VPC: Ethereal glowing cloud cluster
- * - EC2: Enterprise server rack tower with blinking LED lights
- * - Lambda: Sleek serverless microchip with orbital ring
- * - RDS: Cylindrical database tier tower
- * - S3: Storage canister with tiered disks
- * - ALB: Load balancer routing hub
- * - Internet Gateway: Luminous portal arch
- * - Subnet: Glowing architectural zone pad
+ * Creates high-resolution Realistic AWS Architecture Billboard Badges.
+ * Never looks like dots or random blobs. Always crisp, readable, and realistic.
  */
 export function create3DNodeObject(node: GraphNode, isSelected = false, isHovered = false): THREE.Object3D {
   const group = new THREE.Group();
   group.name = node.id;
 
-  const baseHue = isSelected ? 0x38bdf8 : isHovered ? 0xa855f7 : 0xffffff;
+  const style = getServiceStyle(node.type);
+  const cacheKey = `${node.id}_${node.name}_${isSelected}_${isHovered}_${node.status}`;
 
-  switch (node.type) {
-    case "vpc:vpc": {
-      // ─── VPC: TRANSLUCENT ETHEREAL CLOUD CLUSTER ─────────────────────────
-      const cloudGroup = new THREE.Group();
-      const cloudColor = isSelected ? 0x38bdf8 : 0x0284c7;
+  let texture = textureCache.get(cacheKey);
 
-      // Puffy cloud puffs
-      const cloudPuffs = [
-        { x: 0, y: 0, z: 0, r: 16 },
-        { x: -11, y: -2, z: 2, r: 12 },
-        { x: 12, y: -1, z: -1, r: 13 },
-        { x: 5, y: 7, z: 2, r: 11 },
-        { x: -6, y: 6, z: -2, r: 10 },
-        { x: 0, y: -4, z: 6, r: 11 },
-      ];
+  if (!texture) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 576;
+    canvas.height = 180;
+    const ctx = canvas.getContext("2d");
 
-      const cloudMat = new THREE.MeshStandardMaterial({
-        color: cloudColor,
-        emissive: cloudColor,
-        emissiveIntensity: isSelected ? 0.8 : 0.45,
-        transparent: true,
-        opacity: isSelected ? 0.75 : 0.55,
-        roughness: 0.1,
-        metalness: 0.2,
-      });
+    if (ctx) {
+      // Crisp 2D Canvas rendering
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      cloudPuffs.forEach((p) => {
-        const puffGeo = new THREE.SphereGeometry(p.r, 16, 16);
-        const puffMesh = new THREE.Mesh(puffGeo, cloudMat);
-        puffMesh.position.set(p.x, p.y, p.z);
-        cloudGroup.add(puffMesh);
-      });
+      // Card Body
+      const pad = 8;
+      const w = canvas.width - pad * 2;
+      const h = canvas.height - pad * 2;
 
-      // Orbiting cloud shield ring
-      const ringGeo = new THREE.TorusGeometry(26, 0.8, 12, 48);
-      const ringMat = getMaterial(0x38bdf8, 0.8, false, 0.8);
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.rotation.x = Math.PI / 2.3;
-      cloudGroup.add(ring);
-
-      group.add(cloudGroup);
-      break;
-    }
-
-    case "ec2:instance": {
-      // ─── EC2: SERVER RACK / BLADE TOWER WITH LED LIGHTS ───────────────────
-      const serverGroup = new THREE.Group();
-      const bodyGeo = new THREE.BoxGeometry(9, 16, 9);
-      const bodyMat = getMaterial(0x1e293b, 1.0, false, 0.15);
-      const serverBody = new THREE.Mesh(bodyGeo, bodyMat);
-      serverGroup.add(serverBody);
-
-      // Server rack front face with horizontal bay slats
-      for (let y = -6; y <= 6; y += 3) {
-        const bayGeo = new THREE.BoxGeometry(8.2, 2.2, 0.4);
-        const bayMat = getMaterial(0x0f172a, 1.0, false, 0.1);
-        const bay = new THREE.Mesh(bayGeo, bayMat);
-        bay.position.set(0, y, 4.6);
-        serverGroup.add(bay);
-
-        // Green / Blue Activity LED dot
-        const ledGeo = new THREE.SphereGeometry(0.45, 8, 8);
-        const ledColor = y % 2 === 0 ? 0x10b981 : 0x38bdf8;
-        const ledMat = new THREE.MeshBasicMaterial({ color: ledColor });
-        const led = new THREE.Mesh(ledGeo, ledMat);
-        led.position.set(3, y, 4.9);
-        serverGroup.add(led);
+      ctx.fillStyle = isSelected ? "rgba(24, 24, 30, 0.98)" : "rgba(14, 14, 18, 0.92)";
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(pad, pad, w, h, 18);
+      } else {
+        ctx.rect(pad, pad, w, h);
       }
+      ctx.fill();
 
-      // Edge accent borders
-      const edges = new THREE.EdgesGeometry(bodyGeo);
-      const lineMat = new THREE.LineBasicMaterial({
-        color: isSelected ? 0x38bdf8 : 0x0ea5e9,
-        linewidth: 2,
-      });
-      const wireframe = new THREE.LineSegments(edges, lineMat);
-      serverGroup.add(wireframe);
+      // Card Border
+      ctx.lineWidth = isSelected ? 4 : isHovered ? 3 : 2;
+      ctx.strokeStyle = isSelected ? style.color : isHovered ? "#ffffff" : "rgba(63, 63, 70, 0.7)";
+      ctx.stroke();
 
-      group.add(serverGroup);
-      break;
-    }
-
-    case "lambda:function": {
-      // ─── LAMBDA: SERVERLESS MICROCHIP WITH PULSING ENERGY RING ───────────
-      const lambdaGroup = new THREE.Group();
-
-      // Main processor substrate
-      const chipGeo = new THREE.BoxGeometry(11, 2.5, 11);
-      const chipMat = getMaterial(0xf59e0b, 1.0, false, 0.4);
-      const chip = new THREE.Mesh(chipGeo, chipMat);
-      lambdaGroup.add(chip);
-
-      // Inner glowing core
-      const coreGeo = new THREE.BoxGeometry(6, 3.2, 6);
-      const coreMat = getMaterial(0xfef08a, 1.0, false, 0.9);
-      const core = new THREE.Mesh(coreGeo, coreMat);
-      lambdaGroup.add(core);
-
-      // Floating orbital energy ring
-      const ringGeo = new THREE.TorusGeometry(9, 0.5, 12, 36);
-      const ringMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.rotation.x = Math.PI / 4;
-      ring.rotation.y = Math.PI / 6;
-      lambdaGroup.add(ring);
-
-      group.add(lambdaGroup);
-      break;
-    }
-
-    case "rds:db-instance":
-    case "rds:db-cluster": {
-      // ─── RDS: CYLINDRICAL DATABASE STORAGE TOWER ──────────────────────────
-      const dbGroup = new THREE.Group();
-      const dbColor = 0x8b5cf6; // Purple
-
-      // Multi-tier storage cylinder
-      const cylGeo = new THREE.CylinderGeometry(7, 7, 14, 24);
-      const cylMat = getMaterial(dbColor, 0.9, false, 0.4);
-      const cylinder = new THREE.Mesh(cylGeo, cylMat);
-      dbGroup.add(cylinder);
-
-      // Data rings around cylinder
-      for (let y = -4; y <= 4; y += 4) {
-        const diskGeo = new THREE.TorusGeometry(7.4, 0.5, 8, 32);
-        const diskMat = new THREE.MeshBasicMaterial({ color: 0xc4b5fd });
-        const disk = new THREE.Mesh(diskGeo, diskMat);
-        disk.rotation.x = Math.PI / 2;
-        disk.position.y = y;
-        dbGroup.add(disk);
+      // Left Accent Color Strip
+      ctx.fillStyle = style.color;
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(pad, pad, 8, h, [18, 0, 0, 18]);
+      } else {
+        ctx.rect(pad, pad, 8, h);
       }
+      ctx.fill();
 
-      group.add(dbGroup);
-      break;
+      // Service Icon Box on left
+      drawServiceIcon(ctx, style.iconType, style.color, 32, 28, 124);
+
+      // Right Text Area
+      const textLeft = 176;
+
+      // Line 1: Service Type Badge
+      ctx.font = "bold 18px 'JetBrains Mono', monospace";
+      ctx.fillStyle = style.color;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillText(style.shortType, textLeft, 32);
+
+      // Line 2: Resource Name
+      ctx.font = "bold 26px 'Inter', sans-serif";
+      ctx.fillStyle = "#ffffff";
+      let displayName = node.name || node.id;
+      if (displayName.length > 22) {
+        displayName = displayName.slice(0, 20) + "…";
+      }
+      ctx.fillText(displayName, textLeft, 62);
+
+      // Line 3: Region / Spec / Subnet Info
+      ctx.font = "500 18px 'JetBrains Mono', monospace";
+      ctx.fillStyle = "#a1a1aa";
+      let metaText = node.region || "us-east-1";
+      if (node.subGroup) {
+        metaText += ` • ${node.subGroup.slice(0, 16)}`;
+      } else if (node.group) {
+        metaText += ` • ${node.group.slice(0, 16)}`;
+      }
+      ctx.fillText(metaText, textLeft, 102);
+
+      // Top Right: Status Pill
+      const statusX = canvas.width - 32;
+      const statusY = 32;
+      const isHealthy = !node.status || node.status.toLowerCase() === "running" || node.status.toLowerCase() === "healthy";
+      const statusColor = isHealthy ? "#22c55e" : "#f59e0b";
+
+      ctx.beginPath();
+      ctx.arc(statusX - 10, statusY + 10, 6, 0, Math.PI * 2);
+      ctx.fillStyle = statusColor;
+      ctx.fill();
+
+      ctx.font = "bold 15px 'Inter', sans-serif";
+      ctx.fillStyle = statusColor;
+      ctx.textAlign = "right";
+      ctx.fillText(isHealthy ? "ONLINE" : "PENDING", statusX - 22, statusY + 2);
     }
 
-    case "s3:bucket": {
-      // ─── S3: STORAGE CANISTER WITH DUAL DISKS ─────────────────────────────
-      const s3Group = new THREE.Group();
-      const s3Color = 0x10b981; // Emerald
-
-      const canGeo = new THREE.CylinderGeometry(7.5, 7.5, 10, 20);
-      const canMat = getMaterial(s3Color, 0.9, false, 0.5);
-      const can = new THREE.Mesh(canGeo, canMat);
-      s3Group.add(can);
-
-      // Bucket rim
-      const rimGeo = new THREE.TorusGeometry(8, 0.6, 8, 28);
-      const rimMat = new THREE.MeshBasicMaterial({ color: 0x6ee7b7 });
-      const rim = new THREE.Mesh(rimGeo, rimMat);
-      rim.rotation.x = Math.PI / 2;
-      rim.position.y = 5.2;
-      s3Group.add(rim);
-
-      group.add(s3Group);
-      break;
-    }
-
-    case "elb:load-balancer": {
-      // ─── ALB: OCTAGONAL ROUTING HUB ───────────────────────────────────────
-      const albGroup = new THREE.Group();
-      const albColor = 0xec4899; // Pink / Magenta
-
-      const hubGeo = new THREE.OctahedronGeometry(8.5, 1);
-      const hubMat = getMaterial(albColor, 0.95, false, 0.6);
-      const hub = new THREE.Mesh(hubGeo, hubMat);
-      albGroup.add(hub);
-
-      // Outer distribution ring
-      const ringGeo = new THREE.TorusGeometry(12, 0.6, 12, 36);
-      const ringMat = new THREE.MeshBasicMaterial({ color: 0xf472b6 });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.rotation.x = Math.PI / 2;
-      albGroup.add(ring);
-
-      group.add(albGroup);
-      break;
-    }
-
-    case "vpc:subnet": {
-      // ─── SUBNET: ZONE PAD ─────────────────────────────────────────────────
-      const isPublic = node.tags?.Tier?.toLowerCase().includes("public") || node.name.toLowerCase().includes("public");
-      const padColor = isPublic ? 0x059669 : 0x2563eb;
-
-      const padGeo = new THREE.CylinderGeometry(12, 12, 1.8, 6);
-      const padMat = getMaterial(padColor, 0.7, false, 0.4);
-      const pad = new THREE.Mesh(padGeo, padMat);
-      group.add(pad);
-
-      // Perimeter wire
-      const wireGeo = new THREE.EdgesGeometry(padGeo);
-      const wire = new THREE.LineSegments(
-        wireGeo,
-        new THREE.LineBasicMaterial({ color: isPublic ? 0x34d399 : 0x60a5fa, linewidth: 2 })
-      );
-      group.add(wire);
-      break;
-    }
-
-    case "vpc:internet-gateway": {
-      // ─── INTERNET GATEWAY: PORTAL ARCH ────────────────────────────────────
-      const igwGroup = new THREE.Group();
-      const archGeo = new THREE.TorusGeometry(9, 1.2, 12, 32, Math.PI);
-      const archMat = getMaterial(0x06b6d4, 1.0, false, 0.8);
-      const arch = new THREE.Mesh(archGeo, archMat);
-      arch.rotation.z = Math.PI;
-      arch.position.y = 4.5;
-      igwGroup.add(arch);
-
-      // Portal energy disc
-      const discGeo = new THREE.CircleGeometry(7.5, 24);
-      const discMat = new THREE.MeshBasicMaterial({
-        color: 0x22d3ee,
-        transparent: true,
-        opacity: 0.45,
-        side: THREE.DoubleSide,
-      });
-      const disc = new THREE.Mesh(discGeo, discMat);
-      disc.position.y = 4.5;
-      igwGroup.add(disc);
-
-      group.add(igwGroup);
-      break;
-    }
-
-    default: {
-      // ─── DEFAULT RESOURCE: GLOWING CYBER SPHERE ───────────────────────────
-      const sphereGeo = new THREE.SphereGeometry(6, 16, 16);
-      const sphereMat = getMaterial(baseHue, 0.9, false, 0.4);
-      const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-      group.add(sphere);
-      break;
-    }
+    texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    textureCache.set(cacheKey, texture);
   }
 
-  // Selection halo
-  if (isSelected) {
-    const haloGeo = new THREE.RingGeometry(16, 18, 32);
-    const haloMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.85,
-    });
-    const halo = new THREE.Mesh(haloGeo, haloMat);
-    halo.rotation.x = Math.PI / 2;
-    group.add(halo);
-  }
+  // Realistic Billboard Sprite
+  const spriteMat = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+  });
 
-  // Floating HTML-style Sprite Label
-  const canvas = document.createElement("canvas");
-  canvas.width = 384;
-  canvas.height = 80;
-  const ctx = canvas.getContext("2d");
-  if (ctx) {
-    ctx.fillStyle = "rgba(7, 11, 20, 0.85)";
-    ctx.roundRect ? ctx.roundRect(8, 8, 368, 64, 12) : ctx.rect(8, 8, 368, 64);
-    ctx.fill();
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = isSelected ? "#38bdf8" : "rgba(56, 189, 248, 0.35)";
-    ctx.stroke();
-
-    ctx.font = "bold 22px 'Inter', sans-serif";
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    const shortName = node.name.length > 24 ? node.name.slice(0, 22) + "…" : node.name;
-    ctx.fillText(shortName, 192, 40);
-  }
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.minFilter = THREE.LinearFilter;
-  const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
   const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(24, 5, 1);
-  sprite.position.y = 15;
+  // Aspect ratio 576 / 180 = 3.2
+  const scale = node.type === "vpc:vpc" ? 42 : node.type === "vpc:subnet" ? 36 : 30;
+  sprite.scale.set(scale, scale / 3.2, 1);
   group.add(sprite);
+
+  // If node is a VPC or Subnet, also render a subtle architectural ground perimeter
+  if (node.type === "vpc:vpc") {
+    const padGeo = new THREE.CylinderGeometry(28, 28, 1, 32);
+    const padMat = new THREE.MeshBasicMaterial({
+      color: 0x581c87,
+      transparent: true,
+      opacity: 0.18,
+      wireframe: true,
+    });
+    const pad = new THREE.Mesh(padGeo, padMat);
+    pad.position.y = -12;
+    group.add(pad);
+  } else if (node.type === "vpc:subnet") {
+    const padGeo = new THREE.CylinderGeometry(20, 20, 1, 24);
+    const padMat = new THREE.MeshBasicMaterial({
+      color: 0x06b6d4,
+      transparent: true,
+      opacity: 0.15,
+      wireframe: true,
+    });
+    const pad = new THREE.Mesh(padGeo, padMat);
+    pad.position.y = -10;
+    group.add(pad);
+  }
 
   return group;
 }

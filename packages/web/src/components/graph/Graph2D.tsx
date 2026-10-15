@@ -53,7 +53,7 @@ export const Graph2D: React.FC = () => {
     if (!containerRef.current) return;
 
     const fg = new ForceGraph2D(containerRef.current)
-      .backgroundColor("#060911")
+      .backgroundColor("#09090b")
       .nodeCanvasObject((node, ctx, globalScale) => {
         const gNode = node as unknown as GraphNode;
         const x = (node as { x: number }).x;

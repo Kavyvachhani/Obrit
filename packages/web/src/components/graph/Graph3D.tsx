@@ -66,7 +66,7 @@ export const Graph3D: React.FC = () => {
 
     // Initialize 3D Force Graph
     const fg = new ForceGraph3D(containerRef.current)
-      .backgroundColor("#060911")
+      .backgroundColor("#09090b")
       .showNavInfo(false)
       .nodeThreeObject((node) => {
         const gNode = node as unknown as GraphNode;
@@ -120,37 +120,23 @@ export const Graph3D: React.FC = () => {
         return 1;
       });
 
-    // Add cinematic Three.js lighting & starfield
+    // Clean natural architectural lighting (no neon or sci-fi tints)
     const scene = fg.scene();
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
     scene.add(ambientLight);
 
-    const dirLight1 = new THREE.DirectionalLight(0x38bdf8, 1.8);
-    dirLight1.position.set(200, 300, 200);
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight1.position.set(150, 300, 150);
     scene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight(0xa855f7, 1.2);
-    dirLight2.position.set(-200, -200, -100);
+    const dirLight2 = new THREE.DirectionalLight(0xa1a1aa, 0.6);
+    dirLight2.position.set(-150, -200, -100);
     scene.add(dirLight2);
 
-    // Subtle starry space background
-    const starsGeo = new THREE.BufferGeometry();
-    const starCount = 600;
-    const starPositions = new Float32Array(starCount * 3);
-    for (let i = 0; i < starCount * 3; i += 3) {
-      starPositions[i] = (Math.random() - 0.5) * 2000;
-      starPositions[i + 1] = (Math.random() - 0.5) * 2000;
-      starPositions[i + 2] = (Math.random() - 0.5) * 2000;
-    }
-    starsGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
-    const starMat = new THREE.PointsMaterial({
-      color: 0x94a3b8,
-      size: 2,
-      transparent: true,
-      opacity: 0.6,
-    });
-    const starField = new THREE.Points(starsGeo, starMat);
-    scene.add(starField);
+    // Subtle CAD architecture grid floor
+    const grid = new THREE.GridHelper(800, 40, 0x27272a, 0x18181b);
+    grid.position.y = -60;
+    scene.add(grid);
 
     graphRef.current = fg;
 
@@ -184,9 +170,51 @@ export const Graph3D: React.FC = () => {
     graphRef.current.nodeThreeObject(graphRef.current.nodeThreeObject());
   }, [selectedNode, hoveredNode]);
 
+  // Camera action helpers
+  const handleResetCamera = () => {
+    if (!graphRef.current) return;
+    graphRef.current.cameraPosition({ x: 0, y: 0, z: 280 }, { x: 0, y: 0, z: 0 }, 1000);
+  };
+
+  const handleZoom = (factor: number) => {
+    if (!graphRef.current) return;
+    const current = graphRef.current.cameraPosition();
+    graphRef.current.cameraPosition(
+      { x: current.x * factor, y: current.y * factor, z: current.z * factor },
+      undefined,
+      400
+    );
+  };
+
   return (
-    <div className="relative w-full h-full overflow-hidden">
+    <div className="relative w-full h-full overflow-hidden bg-[#09090b]">
       <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+
+      {/* Floating Viewport Controls */}
+      <div className="absolute bottom-4 left-4 z-10 flex items-center space-x-1.5 p-1 bg-[#141418] border border-[#27272a] rounded-lg shadow-md font-mono text-xs">
+        <button
+          onClick={handleResetCamera}
+          className="px-2.5 py-1 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded transition-colors text-[11px]"
+          title="Reset Camera View"
+        >
+          Reset View
+        </button>
+        <span className="text-zinc-600">|</span>
+        <button
+          onClick={() => handleZoom(0.8)}
+          className="px-2 py-1 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded transition-colors text-[11px]"
+          title="Zoom In"
+        >
+          + Zoom
+        </button>
+        <button
+          onClick={() => handleZoom(1.25)}
+          className="px-2 py-1 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded transition-colors text-[11px]"
+          title="Zoom Out"
+        >
+          - Zoom
+        </button>
+      </div>
     </div>
   );
 };
