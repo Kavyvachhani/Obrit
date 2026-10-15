@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import type { ConnectedAccountSummary } from "@orbit/core";
-import { fetchAccounts, deleteAccount as apiDeleteAccount, seedDemoData } from "../lib/api.js";
-import { DEMO_ACCOUNT_ID } from "../lib/mock-data.js";
+import { fetchAccounts, deleteAccount as apiDeleteAccount } from "../lib/api.js";
 
 interface AccountState {
   accounts: ConnectedAccountSummary[];
@@ -14,21 +13,11 @@ interface AccountState {
   setActiveAccountId: (id: string) => void;
   setConnectModalOpen: (open: boolean) => void;
   removeAccount: (id: string) => Promise<void>;
-  seedDemo: () => Promise<void>;
 }
 
 export const useAccountStore = create<AccountState>((set, get) => ({
-  accounts: [
-    {
-      id: DEMO_ACCOUNT_ID,
-      alias: "Production-AWS-Orbit (Demo)",
-      provider: "aws",
-      authMethod: "access_key",
-      regions: ["us-east-1"],
-      createdAt: new Date().toISOString(),
-    },
-  ],
-  activeAccountId: DEMO_ACCOUNT_ID,
+  accounts: [],
+  activeAccountId: "",
   isConnectModalOpen: false,
   isLoading: false,
   error: null,
@@ -40,11 +29,22 @@ export const useAccountStore = create<AccountState>((set, get) => ({
       if (accounts && accounts.length > 0) {
         set({
           accounts,
-          activeAccountId: get().activeAccountId || accounts[0]?.id || DEMO_ACCOUNT_ID,
+          activeAccountId: get().activeAccountId || accounts[0]?.id || "",
+          isConnectModalOpen: false,
+        });
+      } else {
+        set({
+          accounts: [],
+          activeAccountId: "",
+          isConnectModalOpen: true, // Prompt user to connect real AWS account
         });
       }
     } catch {
-      // Keep demo account fallback active
+      set({
+        accounts: [],
+        activeAccountId: "",
+        isConnectModalOpen: true,
+      });
     } finally {
       set({ isLoading: false });
     }
@@ -59,23 +59,11 @@ export const useAccountStore = create<AccountState>((set, get) => ({
       const remaining = get().accounts.filter((a) => a.id !== id);
       set({
         accounts: remaining,
-        activeAccountId: remaining[0]?.id || DEMO_ACCOUNT_ID,
+        activeAccountId: remaining[0]?.id || "",
+        isConnectModalOpen: remaining.length === 0,
       });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : "Failed to delete account" });
-    }
-  },
-
-  seedDemo: async () => {
-    try {
-      set({ isLoading: true });
-      await seedDemoData();
-      await get().loadAccounts();
-      set({ activeAccountId: DEMO_ACCOUNT_ID });
-    } catch {
-      // Demo fallback in store already
-    } finally {
-      set({ isLoading: false });
     }
   },
 }));

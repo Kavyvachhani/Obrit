@@ -1,18 +1,19 @@
 import React from "react";
 import { useGraphStore } from "../../stores/graph-store.js";
 import { useAccountStore } from "../../stores/account-store.js";
+import { triggerScan, fetchGraph } from "../../lib/api.js";
 import {
   RotateCcw,
   Search,
   Box,
   Layers,
-  Sparkles,
   Server,
   Cloud,
   Database,
   HardDrive,
   ShieldAlert,
   Plus,
+  Key,
 } from "lucide-react";
 
 export const Navbar: React.FC = () => {
@@ -27,6 +28,7 @@ export const Navbar: React.FC = () => {
     setScanning,
     lastScannedAt,
     setLastScannedAt,
+    setGraphData,
   } = useGraphStore();
 
   const {
@@ -34,16 +36,27 @@ export const Navbar: React.FC = () => {
     activeAccountId,
     setActiveAccountId,
     setConnectModalOpen,
-    seedDemo,
   } = useAccountStore();
 
   const handleRefresh = async () => {
-    setScanning(true);
-    // Simulate / execute re-scan
-    setTimeout(() => {
-      setScanning(false);
+    if (!activeAccountId) {
+      setConnectModalOpen(true);
+      return;
+    }
+
+    try {
+      setScanning(true);
+      await triggerScan(activeAccountId);
+      const graph = await fetchGraph(activeAccountId);
+      if (graph) {
+        setGraphData(graph);
+      }
       setLastScannedAt(new Date().toLocaleTimeString());
-    }, 1500);
+    } catch (err) {
+      console.error("Rescan failed:", err);
+    } finally {
+      setScanning(false);
+    }
   };
 
   const categories = [
@@ -67,7 +80,7 @@ export const Navbar: React.FC = () => {
             <div className="flex items-center space-x-2">
               <span className="font-bold tracking-tight text-base text-white">ORBIT</span>
               <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">
-                Phase 1
+                Phase 1 Live
               </span>
             </div>
             <span className="text-[10px] text-slate-400 tracking-wide block">3D Cloud Explorer</span>
@@ -76,25 +89,37 @@ export const Navbar: React.FC = () => {
 
         {/* Account Selector */}
         <div className="flex items-center space-x-2 pl-4 border-l border-white/10">
-          <select
-            value={activeAccountId}
-            onChange={(e) => setActiveAccountId(e.target.value)}
-            className="bg-slate-900/80 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400"
-          >
-            {accounts.map((acc) => (
-              <option key={acc.id} value={acc.id}>
-                {acc.alias} ({acc.regions?.[0] || "us-east-1"})
-              </option>
-            ))}
-          </select>
+          {accounts.length > 0 ? (
+            <>
+              <select
+                value={activeAccountId}
+                onChange={(e) => setActiveAccountId(e.target.value)}
+                className="bg-slate-900/80 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400"
+              >
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.alias} ({acc.regions?.[0] || "us-east-1"})
+                  </option>
+                ))}
+              </select>
 
-          <button
-            onClick={() => setConnectModalOpen(true)}
-            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-sky-300 border border-white/10 transition-colors"
-            title="Connect New AWS Account"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+              <button
+                onClick={() => setConnectModalOpen(true)}
+                className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-sky-300 border border-white/10 transition-colors"
+                title="Connect New AWS Account"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setConnectModalOpen(true)}
+              className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-sky-500/20 border border-sky-500/40 text-sky-300 hover:text-white text-xs font-semibold hover:shadow-glow transition-all"
+            >
+              <Key className="w-3.5 h-3.5" />
+              <span>Connect AWS Account</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -135,18 +160,8 @@ export const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Right: 3D/2D Mode, Demo Seed & Refresh */}
+      {/* Right: 3D/2D Mode & Refresh */}
       <div className="flex items-center space-x-3">
-        {/* Demo Seed Button */}
-        <button
-          onClick={seedDemo}
-          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-500/30 text-purple-300 hover:text-white text-xs font-medium transition-all hover:shadow-glow-purple"
-          title="Reset to Full AWS Production Topology Demo"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-          <span>Demo Cloud</span>
-        </button>
-
         {/* 2D / 3D Toggle */}
         <div className="flex p-1 rounded-xl bg-slate-950/60 border border-white/10">
           <button
@@ -174,12 +189,12 @@ export const Navbar: React.FC = () => {
         {/* Rescan / Refresh Button */}
         <button
           onClick={handleRefresh}
-          disabled={isScanning}
+          disabled={isScanning || !activeAccountId}
           className="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-white text-xs font-medium transition-colors disabled:opacity-50"
-          title={`Last scanned: ${lastScannedAt || "Just now"}`}
+          title={lastScannedAt ? `Last scanned: ${lastScannedAt}` : "Scan AWS Infrastructure"}
         >
           <RotateCcw className={`w-3.5 h-3.5 ${isScanning ? "animate-spin text-sky-400" : ""}`} />
-          <span>{isScanning ? "Scanning..." : "Rescan"}</span>
+          <span>{isScanning ? "Scanning AWS..." : "Rescan"}</span>
         </button>
       </div>
     </header>

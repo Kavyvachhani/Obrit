@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type { GraphData, GraphNode, GraphLink } from "@orbit/core";
-import { FALLBACK_GRAPH_DATA } from "../lib/mock-data.js";
 
 interface GraphState {
   nodes: GraphNode[];
@@ -30,20 +29,20 @@ interface GraphState {
 }
 
 export const useGraphStore = create<GraphState>((set) => ({
-  nodes: FALLBACK_GRAPH_DATA.nodes,
-  links: FALLBACK_GRAPH_DATA.links,
+  nodes: [],
+  links: [],
   selectedNode: null,
   hoveredNode: null,
-  viewMode: "3d", // 3D enabled by default as requested!
+  viewMode: "3d",
   quality: "high",
   filterCategory: "all",
   searchQuery: "",
   isLoading: false,
   isScanning: false,
-  lastScannedAt: new Date().toLocaleTimeString(),
+  lastScannedAt: null,
   cameraFocusTrigger: null,
 
-  setGraphData: (data) => set({ nodes: data.nodes, links: data.links }),
+  setGraphData: (data) => set({ nodes: data.nodes || [], links: data.links || [] }),
   selectNode: (node) => set({ selectedNode: node }),
   hoverNode: (node) => set({ hoveredNode: node }),
   setViewMode: (mode) => set({ viewMode: mode }),
