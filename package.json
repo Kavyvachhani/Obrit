@@ -12,7 +12,8 @@
     "dev": "npm run dev --workspace=packages/backend & npm run dev --workspace=packages/web",
     "build": "npm run build --workspaces",
     "start": "node packages/backend/dist/server.js",
-    "build:exe": "npx -y @yao-pkg/pkg packages/backend/dist/server.js --targets node20-win-x64 --output dist-bin/Orbit-Server.exe",
+    "build:exe": "npm run build:electron",
+    "build:electron": "npx esbuild packages/backend/src/server.ts --bundle --platform=node --target=node18 --format=cjs --outfile=packages/desktop-electron/server-bundle.cjs && rm -rf packages/desktop-electron/public && cp -r packages/web/dist packages/desktop-electron/public && npx -y @electron/packager packages/desktop-electron Orbit --platform=win32 --arch=x64 --electron-version=33.2.0 --out=dist-electron --overwrite",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"

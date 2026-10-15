@@ -8,6 +8,9 @@ dist/
 **/dist/
 dist-bin/
 dist-release/
+dist-electron/
+packages/desktop-electron/public/
+packages/desktop-electron/server-bundle.cjs
 build/
 .next/
 out/

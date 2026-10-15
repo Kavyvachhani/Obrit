@@ -32,20 +32,19 @@ jobs:
       - name: Build Backend
         run: npm run build --workspace=packages/backend
 
-      - name: Package Standalone Windows Executable
+      - name: Bundle Backend CJS
+        run: npx esbuild packages/backend/src/server.ts --bundle --platform=node --target=node18 --format=cjs --outfile=packages/desktop-electron/server-bundle.cjs
+
+      - name: Copy Web Dist to Desktop Electron
         run: |
-          npx -y @yao-pkg/pkg packages/backend/dist/server.js --targets node20-win-x64 --output dist-bin/Orbit-Server.exe
-          mkdir dist-release
-          copy dist-bin\Orbit-Server.exe dist-release\
-          xcopy /E /I packages\web\dist dist-release\public
-          
-          # Create batch launcher
-          echo @echo off > dist-release\Start-Orbit.bat
-          echo start http://localhost:4000 >> dist-release\Start-Orbit.bat
-          echo Orbit-Server.exe >> dist-release\Start-Orbit.bat
+          mkdir packages\desktop-electron\public
+          xcopy /E /I packages\web\dist packages\desktop-electron\public
+
+      - name: Package Windows Desktop App (.exe)
+        run: npx -y @electron/packager packages/desktop-electron Orbit --platform=win32 --arch=x64 --electron-version=33.2.0 --out=dist-electron --overwrite
 
       - name: Upload Windows Executable Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Orbit-Windows-x64
-          path: dist-release/
+          name: Orbit-Windows-App
+          path: dist-electron/Orbit-win32-x64/

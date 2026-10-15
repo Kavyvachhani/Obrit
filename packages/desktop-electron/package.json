@@ -1,0 +1,8 @@
+{
+  "name": "orbit-desktop",
+  "version": "0.1.0",
+  "description": "Orbit — Live 3D AWS Infrastructure Explorer",
+  "main": "main.cjs",
+  "author": "Orbit Team",
+  "license": "MIT"
+}
