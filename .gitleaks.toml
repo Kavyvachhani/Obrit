@@ -1,0 +1,32 @@
+title = "gitleaks config for Orbit"
+
+[[rules]]
+id = "aws-access-key"
+description = "AWS Access Key ID"
+regex = '''(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}'''
+tags = ["aws", "credentials"]
+
+[[rules]]
+id = "aws-secret-key"
+description = "AWS Secret Access Key"
+regex = '''(?i)aws_secret_access_key\s*=\s*[A-Za-z0-9/+=]{40}'''
+tags = ["aws", "credentials"]
+
+[[rules]]
+id = "generic-secret"
+description = "Generic secret pattern"
+regex = '''(?i)(secret|password|passwd|token|api_key|apikey|access_key)\s*[:=]\s*['"][^\s'"]{8,}['"]'''
+tags = ["generic", "credentials"]
+
+[[rules]]
+id = "private-key"
+description = "Private Key"
+regex = '''-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----'''
+tags = ["key", "credentials"]
+
+[allowlist]
+paths = [
+  '''\.env\.example''',
+  '''docs/aws-iam-policy\.json''',
+  '''\.gitleaks\.toml''',
+]

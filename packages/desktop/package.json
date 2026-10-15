@@ -1,0 +1,10 @@
+{
+  "name": "@orbit/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tauri desktop shell placeholder for Orbit",
+  "scripts": {
+    "build": "echo 'Desktop build deferred to Phase 3+'",
+    "dev": "echo 'Desktop dev deferred to Phase 3+'"
+  }
+}

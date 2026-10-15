@@ -1,0 +1,51 @@
+name: Build Windows Executable (.exe)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows-exe:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Core
+        run: npm run build --workspace=packages/core
+
+      - name: Build Web Frontend
+        run: npm run build --workspace=packages/web
+
+      - name: Build Backend
+        run: npm run build --workspace=packages/backend
+
+      - name: Package Standalone Windows Executable
+        run: |
+          npx -y @yao-pkg/pkg packages/backend/dist/server.js --targets node20-win-x64 --output dist-bin/Orbit-Server.exe
+          mkdir dist-release
+          copy dist-bin\Orbit-Server.exe dist-release\
+          xcopy /E /I packages\web\dist dist-release\public
+          
+          # Create batch launcher
+          echo @echo off > dist-release\Start-Orbit.bat
+          echo start http://localhost:4000 >> dist-release\Start-Orbit.bat
+          echo Orbit-Server.exe >> dist-release\Start-Orbit.bat
+
+      - name: Upload Windows Executable Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Orbit-Windows-x64
+          path: dist-release/

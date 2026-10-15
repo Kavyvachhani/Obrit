@@ -1,0 +1,26 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY package.json tsconfig.base.json ./
+COPY packages/core ./packages/core
+COPY packages/backend ./packages/backend
+
+RUN npm install
+RUN npm run build --workspace=packages/core
+RUN npm run build --workspace=packages/backend
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY package.json tsconfig.base.json ./
+COPY packages/core/package.json ./packages/core/
+COPY packages/backend/package.json ./packages/backend/
+
+RUN npm install --omit=dev
+
+COPY --from=builder /app/packages/core/dist ./packages/core/dist
+COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
+
+EXPOSE 4000
+CMD ["node", "packages/backend/dist/server.js"]

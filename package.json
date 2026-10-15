@@ -1,0 +1,23 @@
+{
+  "name": "orbit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live 3D AWS Infrastructure Explorer & Simulator",
+  "workspaces": [
+    "packages/core",
+    "packages/backend",
+    "packages/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=packages/backend & npm run dev --workspace=packages/web",
+    "build": "npm run build --workspaces",
+    "start": "node packages/backend/dist/server.js",
+    "build:exe": "npx -y @yao-pkg/pkg packages/backend/dist/server.js --targets node20-win-x64 --output dist-bin/Orbit-Server.exe",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
