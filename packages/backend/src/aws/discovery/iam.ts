@@ -40,27 +40,39 @@ export async function discoverIam(
     marker = result.IsTruncated ? (result.Marker as string) : undefined;
   } while (marker);
 
-  // ─── Get attached policies for each role ─────────────────────────────────
+  // ─── Get attached policies (check top 25 roles to keep discovery instant) ───
+  const policyLookupSlice = allRoles.slice(0, 25);
+  const rolePolicyMap = new Map<string, Array<{ PolicyName?: string; PolicyArn?: string }>>();
+
+  const chunkSize = 5;
+  for (let i = 0; i < policyLookupSlice.length; i += chunkSize) {
+    const chunk = policyLookupSlice.slice(i, i + chunkSize);
+    await Promise.allSettled(
+      chunk.map(async (role) => {
+        const roleName = role["RoleName"] as string;
+        try {
+          const timeoutPromise = new Promise<{ AttachedPolicies?: Array<{ PolicyName?: string; PolicyArn?: string }> }>((_, reject) =>
+            setTimeout(() => reject(new Error("Timeout")), 1500)
+          );
+          const callPromise = awsReadOnlyCall<{ AttachedPolicies?: Array<{ PolicyName?: string; PolicyArn?: string }> }>(
+            client,
+            new ListAttachedRolePoliciesCommand({ RoleName: roleName }),
+            "iam",
+            accountId
+          );
+          const policiesResult = await Promise.race([callPromise, timeoutPromise]);
+          rolePolicyMap.set(roleName, policiesResult.AttachedPolicies ?? []);
+        } catch {
+          rolePolicyMap.set(roleName, []);
+        }
+      })
+    );
+  }
+
   for (const role of allRoles) {
     const roleName = role["RoleName"] as string;
     const roleArn = role["Arn"] as string;
-
-    let attachedPolicies: Array<{ PolicyName?: string; PolicyArn?: string }> = [];
-    try {
-      const policiesResult = await withRateLimit("iam", () =>
-        awsReadOnlyCall<{
-          AttachedPolicies?: Array<{ PolicyName?: string; PolicyArn?: string }>;
-        }>(
-          client,
-          new ListAttachedRolePoliciesCommand({ RoleName: roleName }),
-          "iam",
-          accountId
-        )
-      );
-      attachedPolicies = policiesResult.AttachedPolicies ?? [];
-    } catch {
-      // Non-fatal: some roles may have restricted policy listing
-    }
+    const attachedPolicies = rolePolicyMap.get(roleName) ?? [];
 
     resources.push({
       id: roleName,

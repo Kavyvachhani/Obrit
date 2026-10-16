@@ -42,28 +42,11 @@ export async function discoverLambda(
     marker = result.NextMarker;
   } while (marker);
 
-  // ─── Get Function details (for VPC config) ───────────────────────────────
+  // ─── Process Functions (VpcConfig and metadata are already included in ListFunctions) ──
   for (const fn of allFunctions) {
     const functionName = fn["FunctionName"] as string;
     const functionArn = fn["FunctionArn"] as string;
-
-    let detailedConfig: Record<string, unknown> = fn;
-
-    try {
-      const detail = await withRateLimit("lambda", () =>
-        awsReadOnlyCall<{ Configuration?: Record<string, unknown> }>(
-          client,
-          new GetFunctionCommand({ FunctionName: functionName }),
-          "lambda",
-          accountId
-        )
-      );
-      if (detail.Configuration) {
-        detailedConfig = { ...fn, ...detail.Configuration };
-      }
-    } catch {
-      // Fall back to list data if GetFunction fails
-    }
+    const detailedConfig: Record<string, unknown> = fn;
 
     resources.push({
       id: functionName,

@@ -67,7 +67,7 @@ export async function accountRoutes(app: FastifyInstance): Promise<void> {
       provider: row.provider as "aws",
       authMethod: row.auth_method as "access_key" | "assume_role",
       regions: [row.region],
-      createdAt: row.created_at.toISOString(),
+      createdAt: typeof row.created_at === "string" ? row.created_at : row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
     }));
 
     return reply.send(accounts);

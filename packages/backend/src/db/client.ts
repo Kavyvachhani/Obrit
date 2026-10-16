@@ -1,11 +1,13 @@
 import pg from "pg";
+import fs from "fs";
+import path from "path";
 
 const { Pool } = pg;
 
 let pool: pg.Pool | null = null;
 let useFallback = false;
 
-// In-memory fallback store when PostgreSQL is not running (e.g. running without Docker)
+// In-memory + disk-persisted fallback store when PostgreSQL is not running
 const memoryStore = {
   connected_accounts: new Map<string, Record<string, unknown>>(),
   scan_runs: new Map<string, Record<string, unknown>>(),
@@ -13,6 +15,65 @@ const memoryStore = {
   edges: new Map<string, Record<string, unknown>>(),
   audit_log: [] as Record<string, unknown>[],
 };
+
+const DATA_DIR = path.resolve(process.cwd(), "data");
+const STORE_FILE = path.join(DATA_DIR, "orbit-store.json");
+
+// Load stored data from disk on startup
+try {
+  if (fs.existsSync(STORE_FILE)) {
+    const raw = fs.readFileSync(STORE_FILE, "utf-8");
+    const data = JSON.parse(raw);
+    if (data.connected_accounts) {
+      for (const [k, v] of Object.entries(data.connected_accounts)) {
+        memoryStore.connected_accounts.set(k, v as Record<string, unknown>);
+      }
+    }
+    if (data.scan_runs) {
+      for (const [k, v] of Object.entries(data.scan_runs)) {
+        memoryStore.scan_runs.set(k, v as Record<string, unknown>);
+      }
+    }
+    if (data.resources) {
+      for (const [k, v] of Object.entries(data.resources)) {
+        memoryStore.resources.set(k, v as Record<string, unknown>);
+      }
+    }
+    if (data.edges) {
+      for (const [k, v] of Object.entries(data.edges)) {
+        memoryStore.edges.set(k, v as Record<string, unknown>);
+      }
+    }
+    if (Array.isArray(data.audit_log)) {
+      memoryStore.audit_log = data.audit_log;
+    }
+    console.log(`[Store] Loaded ${memoryStore.connected_accounts.size} account(s), ${memoryStore.resources.size} resource(s) from persistent storage.`);
+  }
+} catch (e) {
+  console.warn("[Store] Could not read existing store file:", e);
+}
+
+let saveTimeout: NodeJS.Timeout | null = null;
+function scheduleSave() {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      const serializable = {
+        connected_accounts: Object.fromEntries(memoryStore.connected_accounts),
+        scan_runs: Object.fromEntries(memoryStore.scan_runs),
+        resources: Object.fromEntries(memoryStore.resources),
+        edges: Object.fromEntries(memoryStore.edges),
+        audit_log: memoryStore.audit_log,
+      };
+      fs.writeFileSync(STORE_FILE, JSON.stringify(serializable, null, 2), "utf-8");
+    } catch (e) {
+      console.error("[Store] Failed to save store to disk:", e);
+    }
+  }, 100);
+}
 
 export function getPool(): pg.Pool {
   if (!pool) {
@@ -57,6 +118,7 @@ export async function query<T extends pg.QueryResultRow = Record<string, unknown
   // Handle DELETE
   if (lower.startsWith("delete from edges")) {
     memoryStore.edges.clear();
+    scheduleSave();
     return { rows: [], command: "DELETE", rowCount: 0, oid: 0, fields: [] };
   }
   if (lower.startsWith("delete from resources")) {
@@ -67,10 +129,12 @@ export async function query<T extends pg.QueryResultRow = Record<string, unknown
     } else {
       memoryStore.resources.clear();
     }
+    scheduleSave();
     return { rows: [], command: "DELETE", rowCount: 0, oid: 0, fields: [] };
   }
   if (lower.startsWith("delete from connected_accounts")) {
     if (params && params[0]) memoryStore.connected_accounts.delete(params[0] as string);
+    scheduleSave();
     return { rows: [], command: "DELETE", rowCount: 1, oid: 0, fields: [] };
   }
 
@@ -88,6 +152,7 @@ export async function query<T extends pg.QueryResultRow = Record<string, unknown
       created_at: new Date(),
     };
     memoryStore.connected_accounts.set(p[0] as string, acc);
+    scheduleSave();
     return { rows: [acc as unknown as T], command: "INSERT", rowCount: 1, oid: 0, fields: [] };
   }
 
@@ -105,6 +170,7 @@ export async function query<T extends pg.QueryResultRow = Record<string, unknown
       finished_at: new Date(),
     };
     memoryStore.scan_runs.set(p[0] as string, scan);
+    scheduleSave();
     return { rows: [scan as unknown as T], command: "INSERT", rowCount: 1, oid: 0, fields: [] };
   }
 
@@ -118,6 +184,7 @@ export async function query<T extends pg.QueryResultRow = Record<string, unknown
     scan["errors"] = p[2];
     scan["finished_at"] = new Date();
     memoryStore.scan_runs.set(scanId, scan);
+    scheduleSave();
     return { rows: [scan as unknown as T], command: "UPDATE", rowCount: 1, oid: 0, fields: [] };
   }
 
@@ -139,6 +206,7 @@ export async function query<T extends pg.QueryResultRow = Record<string, unknown
       scan_run_id: p[11],
     };
     memoryStore.resources.set(p[0] as string, res);
+    scheduleSave();
     return { rows: [res as unknown as T], command: "INSERT", rowCount: 1, oid: 0, fields: [] };
   }
 
@@ -153,6 +221,7 @@ export async function query<T extends pg.QueryResultRow = Record<string, unknown
       scan_run_id: p[4],
     };
     memoryStore.edges.set(p[0] as string, edge);
+    scheduleSave();
     return { rows: [edge as unknown as T], command: "INSERT", rowCount: 1, oid: 0, fields: [] };
   }
 

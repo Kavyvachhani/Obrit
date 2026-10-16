@@ -68,10 +68,18 @@ export async function buildServer() {
   const fs = await import("fs");
   const path = await import("path");
   const url = await import("url");
-  const dirname =
-    typeof __dirname !== "undefined"
-      ? __dirname
-      : path.dirname(url.fileURLToPath(import.meta.url));
+  let dirname = process.cwd();
+  if (typeof __dirname !== "undefined") {
+    dirname = __dirname;
+  } else {
+    try {
+      if (typeof import.meta !== "undefined" && (import.meta as any).url) {
+        dirname = path.dirname(url.fileURLToPath((import.meta as any).url));
+      }
+    } catch {
+      dirname = process.cwd();
+    }
+  }
   const candidateDirs = [
     path.resolve(process.cwd(), "packages/web/dist"),
     path.resolve(process.cwd(), "public"),

@@ -22,7 +22,7 @@ export async function connectAccount(data: ConnectAccountRequest): Promise<Conne
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to connect account");
+    throw new Error(err.message || err.error || `Failed to connect account (${res.status})`);
   }
   return res.json();
 }
@@ -40,7 +40,7 @@ export async function triggerScan(accountId: string): Promise<ScanRun> {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Scan failed");
+    throw new Error(err.message || err.error || `Scan failed (${res.status})`);
   }
   return res.json();
 }

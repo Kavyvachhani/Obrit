@@ -3,7 +3,7 @@ import type { GraphNode, GraphLink } from "@orbit/core";
 export function filterGraphData(
   nodes: GraphNode[],
   links: GraphLink[],
-  category: "all" | "compute" | "network" | "database" | "storage" | "security",
+  category: "all" | "compute" | "network" | "database" | "storage" | "security" | "incomplete",
   searchQuery: string
 ): { filteredNodes: GraphNode[]; filteredLinks: GraphLink[] } {
   const query = searchQuery.trim().toLowerCase();
@@ -11,6 +11,10 @@ export function filterGraphData(
   // 1. Filter by category
   let matchedNodes = nodes.filter((n) => {
     if (category === "all") return true;
+
+    if (category === "incomplete") {
+      return n.status === "incomplete";
+    }
 
     if (category === "network") {
       // Entire networking infrastructure

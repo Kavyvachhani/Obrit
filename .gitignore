@@ -29,8 +29,9 @@ out/
 credentials.json
 **/encrypted-creds/
 
-# Docker
+# Docker & Local Data
 docker/data/
+packages/backend/data/
 
 # Tauri
 packages/desktop/src-tauri/target/

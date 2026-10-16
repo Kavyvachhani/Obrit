@@ -1,14 +1,17 @@
 import React, { useEffect } from "react";
 import { Navbar } from "./components/layout/Navbar.js";
 import { Sidebar } from "./components/layout/Sidebar.js";
-import { StatusBar } from "./components/layout/StatusBar.js";
 import { Graph3D } from "./components/graph/Graph3D.js";
 import { Graph2D } from "./components/graph/Graph2D.js";
 import { InspectorPanel } from "./components/inspector/InspectorPanel.js";
 import { ConnectModal } from "./components/connect/ConnectModal.js";
+import { FaultChecklistModal } from "./components/resilience/FaultChecklistModal.js";
+import { EdgeTooltip } from "./components/graph/EdgeTooltip.js";
 import { useGraphStore } from "./stores/graph-store.js";
 import { useAccountStore } from "./stores/account-store.js";
 import { fetchGraph } from "./lib/api.js";
+
+import { DEFAULT_AWS_TOPOLOGY } from "./lib/architecture-data.js";
 
 export const App: React.FC = () => {
   const { viewMode, setGraphData, setLoading } = useGraphStore();
@@ -21,7 +24,10 @@ export const App: React.FC = () => {
 
   // Load graph for active account if available
   useEffect(() => {
-    if (!activeAccountId) return;
+    if (!activeAccountId || activeAccountId === "demo") {
+      setGraphData(DEFAULT_AWS_TOPOLOGY);
+      return;
+    }
 
     let cancelled = false;
     const load = async () => {
@@ -30,9 +36,13 @@ export const App: React.FC = () => {
         const data = await fetchGraph(activeAccountId);
         if (!cancelled && data && data.nodes && data.nodes.length > 0) {
           setGraphData(data);
+        } else if (!cancelled) {
+          setGraphData(DEFAULT_AWS_TOPOLOGY);
         }
       } catch {
-        // Fall back gracefully to active architecture topology
+        if (!cancelled) {
+          setGraphData(DEFAULT_AWS_TOPOLOGY);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -45,29 +55,50 @@ export const App: React.FC = () => {
   }, [activeAccountId, setGraphData, setLoading]);
 
   return (
-    <div className="relative w-screen h-screen flex flex-col bg-[#09090b] select-none overflow-hidden font-sans text-zinc-100">
-      {/* Top Navigation Bar */}
+    <div className="relative w-screen h-screen bg-[#0B0E14] select-none overflow-hidden font-sans text-[#E6E9EF]">
+      {/* Full-bleed 3D/2D Canvas */}
+      <main className="absolute inset-0 w-full h-full overflow-hidden bg-[#0B0E14]">
+        {viewMode === "3d" ? <Graph3D /> : <Graph2D />}
+      </main>
+
+      {/* Floating Top Navigation Chrome (Wireframe Row 1 & Row 2) */}
       <Navbar />
 
-      {/* Main Studio Body: Sidebar on Left, 3D/2D Canvas in Center, Inspector on Right */}
-      <div className="relative flex-1 flex w-full h-[calc(100vh-3.5rem-2rem)] overflow-hidden">
-        {/* Left: Infrastructure Hierarchy Tree */}
-        <Sidebar />
+      {/* Floating Collapsible Left Sidebar (Overlay) */}
+      <Sidebar />
 
-        {/* Center: Real 3D / 2D WebGL Topology Canvas */}
-        <main className="relative flex-1 h-full overflow-hidden bg-[#09090b]">
-          {viewMode === "3d" ? <Graph3D /> : <Graph2D />}
+      {/* Floating Selected Resource Inspector (On click only) */}
+      <InspectorPanel />
 
-          {/* Right: Selected Resource Configuration Inspector */}
-          <InspectorPanel />
-        </main>
+      {/* Floating Connection Hover / Click Tooltip */}
+      <EdgeTooltip />
+
+      {/* Floating Bottom-Left Legend matching wireframe */}
+      <div className="absolute bottom-5 left-5 z-20 pointer-events-auto flex items-center gap-3 px-3 py-1.5 bg-[#151A24]/85 backdrop-blur-md border border-[#262D3A] rounded-lg shadow-xl text-xs font-sans">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-[#8893A6]">Legend:</span>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#3DDC84]" />
+          <span className="text-[11px] text-[#E6E9EF]">healthy</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#F2B33D]" />
+          <span className="text-[11px] text-[#E6E9EF]">exposed</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#FF5C5C]" />
+          <span className="text-[11px] text-[#E6E9EF]">failed</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full border border-dashed border-[#8893A6] bg-[#8893A6]/20" />
+          <span className="text-[11px] text-[#8893A6]">incomplete</span>
+        </div>
       </div>
-
-      {/* Bottom Status Bar */}
-      <StatusBar />
 
       {/* Connect AWS Account Modal */}
       <ConnectModal />
+
+      {/* Fault Tolerance & Resilience Checklist Modal */}
+      <FaultChecklistModal />
     </div>
   );
 };

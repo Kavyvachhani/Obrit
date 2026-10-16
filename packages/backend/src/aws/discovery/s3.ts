@@ -30,26 +30,44 @@ export async function discoverS3(
     )
   );
 
-  for (const bucket of bucketsResult.Buckets ?? []) {
+  const allBuckets = bucketsResult.Buckets ?? [];
+  const maxLocationLookups = 25; // Check location for up to 25 buckets to prevent scan hangs
+  const bucketLookupSlice = allBuckets.slice(0, maxLocationLookups);
+
+  // Parallel location lookups in chunks of 5 with 1.5s timeout per bucket
+  const chunkSize = 5;
+  const locationMap = new Map<string, string>();
+
+  for (let i = 0; i < bucketLookupSlice.length; i += chunkSize) {
+    const chunk = bucketLookupSlice.slice(i, i + chunkSize);
+    await Promise.allSettled(
+      chunk.map(async (bucket) => {
+        const bucketName = bucket.Name;
+        if (!bucketName) return;
+        try {
+          const timeoutPromise = new Promise<{ LocationConstraint?: string }>((_, reject) =>
+            setTimeout(() => reject(new Error("Timeout")), 1500)
+          );
+          const callPromise = awsReadOnlyCall<{ LocationConstraint?: string }>(
+            client,
+            new GetBucketLocationCommand({ Bucket: bucketName }),
+            "s3",
+            accountId
+          );
+          const locationResult = await Promise.race([callPromise, timeoutPromise]);
+          locationMap.set(bucketName, locationResult.LocationConstraint || "us-east-1");
+        } catch {
+          locationMap.set(bucketName, region || "us-east-1");
+        }
+      })
+    );
+  }
+
+  for (const bucket of allBuckets) {
     const bucketName = bucket.Name;
     if (!bucketName) continue;
 
-    // Get bucket location to determine its actual region
-    let bucketRegion = region;
-    try {
-      const locationResult = await withRateLimit("s3", () =>
-        awsReadOnlyCall<{ LocationConstraint?: string }>(
-          client,
-          new GetBucketLocationCommand({ Bucket: bucketName }),
-          "s3",
-          accountId
-        )
-      );
-      // null/empty LocationConstraint means us-east-1
-      bucketRegion = locationResult.LocationConstraint || "us-east-1";
-    } catch {
-      // Fall back to the account region if we can't get the location
-    }
+    const bucketRegion = locationMap.get(bucketName) || region || "us-east-1";
 
     resources.push({
       id: bucketName,
@@ -70,6 +88,5 @@ export async function discoverS3(
     });
   }
 
-  // S3 buckets are global — no edges to VPCs/subnets
   return { resources };
 }

@@ -44,7 +44,7 @@ export const DEFAULT_AWS_TOPOLOGY: GraphData = {
         InternetGatewayId: "igw-0998877665544332",
         Attachments: [{ State: "available", VpcId: "vpc-0a8b9c1d2e3f4001" }],
       },
-      status: "healthy",
+      status: "exposed",
       lastSeenAt: new Date().toISOString(),
       group: "vpc-0a8b9c1d2e3f4001",
     },
@@ -221,7 +221,7 @@ export const DEFAULT_AWS_TOPOLOGY: GraphData = {
         Type: "application",
         IpAddressType: "ipv4",
       },
-      status: "healthy",
+      status: "exposed",
       lastSeenAt: new Date().toISOString(),
       group: "vpc-0a8b9c1d2e3f4001",
     },
@@ -286,18 +286,49 @@ export const DEFAULT_AWS_TOPOLOGY: GraphData = {
       rawConfig: {
         InstanceId: "i-091a2b3c4d5e6f702",
         InstanceType: "c6i.2xlarge",
-        State: { Name: "running" },
+        State: { Name: "impaired" },
         PrivateIpAddress: "10.0.11.89",
         VpcId: "vpc-0a8b9c1d2e3f4001",
         SubnetId: "subnet-04private1b",
         AvailabilityZone: "us-east-1b",
-        CpuCores: 8,
-        MemoryGib: 16,
+        AlarmReason: "High memory saturation 98.4%",
       },
-      status: "healthy",
+      status: "failed",
       lastSeenAt: new Date().toISOString(),
       group: "vpc-0a8b9c1d2e3f4001",
       subGroup: "subnet-04private1b",
+    },
+    {
+      id: "i-0demo1d1accessdenied",
+      provider: "aws",
+      accountId: "123456789012",
+      region: "us-east-1",
+      type: "ec2:instance",
+      arn: "arn:aws:ec2:us-east-1:123456789012:instance/i-0demo1d1accessdenied",
+      name: "demo-1d-1",
+      tags: { Name: "demo-1d-1", Role: "BatchProcessor", Environment: "production", Tier: "Compute" },
+      rawConfig: {
+        InstanceId: "i-0demo1d1accessdenied",
+        InstanceType: "m5.large",
+        State: { Name: "running" },
+        PrivateIpAddress: "10.0.11.205",
+        VpcId: "vpc-0a8b9c1d2e3f4001",
+        SubnetId: "subnet-04private1b",
+        AvailabilityZone: "us-east-1b",
+        ScanDiagnostic: "Partial describe response — ec2:DescribeNetworkInterfaces unauthorized",
+      },
+      status: "incomplete",
+      lastSeenAt: new Date().toISOString(),
+      group: "vpc-0a8b9c1d2e3f4001",
+      subGroup: "subnet-04private1b",
+      scanError: {
+        code: "AccessDenied",
+        operation: "ec2:DescribeNetworkInterfaces",
+        message: "ec2:DescribeNetworkInterfaces returned AccessDenied for this resource",
+        lastSuccessScan: "Never (IAM permission missing on initial scan cycle)",
+        cyclesFailing: 3,
+        suggestedFix: "Attach IAM policy allowing 'ec2:DescribeNetworkInterfaces' on resource '*' to Orbit scan role.",
+      },
     },
 
     // ─── SERVERLESS COMPUTE (LAMBDA) ───────────────────────────────────────
@@ -341,8 +372,9 @@ export const DEFAULT_AWS_TOPOLOGY: GraphData = {
         MemorySize: 1024,
         Timeout: 30,
         Architectures: ["arm64"],
+        AlarmReason: "Lambda ErrorRate > 5% on streaming queue",
       },
-      status: "healthy",
+      status: "failed",
       lastSeenAt: new Date().toISOString(),
       group: "vpc-0a8b9c1d2e3f4001",
     },
@@ -430,8 +462,9 @@ export const DEFAULT_AWS_TOPOLOGY: GraphData = {
         GroupName: "sg-edge-ingress-https",
         Description: "Allow 443 inbound from 0.0.0.0/0",
         VpcId: "vpc-0a8b9c1d2e3f4001",
+        ExposureFinding: "0.0.0.0/0 wide ingress permitted on port 443 without rate limiter",
       },
-      status: "healthy",
+      status: "exposed",
       lastSeenAt: new Date().toISOString(),
       group: "vpc-0a8b9c1d2e3f4001",
     },
@@ -489,33 +522,41 @@ export const DEFAULT_AWS_TOPOLOGY: GraphData = {
     { id: "l-sub5-vpc", sourceResourceId: "subnet-05db1a", targetResourceId: "vpc-0a8b9c1d2e3f4001", relationshipType: "contained-in", source: "subnet-05db1a", target: "vpc-0a8b9c1d2e3f4001" },
     { id: "l-sub6-vpc", sourceResourceId: "subnet-06db1b", targetResourceId: "vpc-0a8b9c1d2e3f4001", relationshipType: "contained-in", source: "subnet-06db1b", target: "vpc-0a8b9c1d2e3f4001" },
 
-    // NAT Gateway in public subnet
-    { id: "l-nat-sub1", sourceResourceId: "nat-05544332211009988", targetResourceId: "subnet-01public1a", relationshipType: "located-in", source: "nat-05544332211009988", target: "subnet-01public1a" },
+    // Ingress & Egress Traffic routing
+    { id: "l-igw-alb", sourceResourceId: "igw-0998877665544332", targetResourceId: "alb-production-edge", relationshipType: "routes-to", source: "igw-0998877665544332", target: "alb-production-edge" },
+    { id: "l-nat-igw", sourceResourceId: "nat-05544332211009988", targetResourceId: "igw-0998877665544332", relationshipType: "routes-to", source: "nat-05544332211009988", target: "igw-0998877665544332" },
 
-    // ALB routes to TargetGroup
+    // ALB routes to TargetGroup & SG
     { id: "l-alb-tg", sourceResourceId: "alb-production-edge", targetResourceId: "tg-production-api", relationshipType: "routes-to", source: "alb-production-edge", target: "tg-production-api" },
     { id: "l-alb-sg", sourceResourceId: "alb-production-edge", targetResourceId: "sg-edge-alb", relationshipType: "member-of", source: "alb-production-edge", target: "sg-edge-alb" },
 
-    // TargetGroup targets EC2 workers
+    // TargetGroup targets EC2 workers & Lambda
     { id: "l-tg-ec2-1a", sourceResourceId: "tg-production-api", targetResourceId: "i-091a2b3c4d5e6f701", relationshipType: "targets", source: "tg-production-api", target: "i-091a2b3c4d5e6f701" },
     { id: "l-tg-ec2-1b", sourceResourceId: "tg-production-api", targetResourceId: "i-091a2b3c4d5e6f702", relationshipType: "targets", source: "tg-production-api", target: "i-091a2b3c4d5e6f702" },
-
-    // EC2 instances attached in private subnets
-    { id: "l-ec2-sub3", sourceResourceId: "i-091a2b3c4d5e6f701", targetResourceId: "subnet-03private1a", relationshipType: "attached-in", source: "i-091a2b3c4d5e6f701", target: "subnet-03private1a" },
-    { id: "l-ec2-sub4", sourceResourceId: "i-091a2b3c4d5e6f702", targetResourceId: "subnet-04private1b", relationshipType: "attached-in", source: "i-091a2b3c4d5e6f702", target: "subnet-04private1b" },
-    { id: "l-ec2-sg", sourceResourceId: "i-091a2b3c4d5e6f701", targetResourceId: "sg-internal-app", relationshipType: "member-of", source: "i-091a2b3c4d5e6f701", target: "sg-internal-app" },
-    { id: "l-ec2-role", sourceResourceId: "i-091a2b3c4d5e6f701", targetResourceId: "role-ec2-ssm-s3-access", relationshipType: "member-of", source: "i-091a2b3c4d5e6f701", target: "role-ec2-ssm-s3-access" },
+    { id: "l-tg-lambda", sourceResourceId: "tg-production-api", targetResourceId: "func-prod-auth-token-validator", relationshipType: "targets", source: "tg-production-api", target: "func-prod-auth-token-validator" },
 
     // EC2 queries RDS Aurora DB
-    { id: "l-ec2-rds", sourceResourceId: "i-091a2b3c4d5e6f701", targetResourceId: "db-prod-aurora-pg-primary", relationshipType: "routes-to", source: "i-091a2b3c4d5e6f701", target: "db-prod-aurora-pg-primary" },
+    { id: "l-ec2-rds-1a", sourceResourceId: "i-091a2b3c4d5e6f701", targetResourceId: "db-prod-aurora-pg-primary", relationshipType: "routes-to", source: "i-091a2b3c4d5e6f701", target: "db-prod-aurora-pg-primary" },
+    { id: "l-ec2-rds-1b", sourceResourceId: "i-091a2b3c4d5e6f702", targetResourceId: "db-prod-aurora-pg-primary", relationshipType: "routes-to", source: "i-091a2b3c4d5e6f702", target: "db-prod-aurora-pg-primary" },
 
-    // Lambda attached in private subnet
-    { id: "l-lambda-sub3", sourceResourceId: "func-prod-auth-token-validator", targetResourceId: "subnet-03private1a", relationshipType: "runs-in", source: "func-prod-auth-token-validator", target: "subnet-03private1a" },
+    // Security & IAM Associations
+    { id: "l-ec2-sg", sourceResourceId: "i-091a2b3c4d5e6f701", targetResourceId: "sg-internal-app", relationshipType: "member-of", source: "i-091a2b3c4d5e6f701", target: "sg-internal-app" },
+    { id: "l-ec2-role", sourceResourceId: "i-091a2b3c4d5e6f701", targetResourceId: "role-ec2-ssm-s3-access", relationshipType: "member-of", source: "i-091a2b3c4d5e6f701", target: "role-ec2-ssm-s3-access" },
+    { id: "l-role-s3", sourceResourceId: "role-ec2-ssm-s3-access", targetResourceId: "s3-prod-static-distribution-cdn", relationshipType: "routes-to", source: "role-ec2-ssm-s3-access", target: "s3-prod-static-distribution-cdn" },
 
     // S3 stream to Lambda consumer
     { id: "l-s3-lambda", sourceResourceId: "s3-prod-telemetry-data-lake", targetResourceId: "func-prod-event-pipeline-consumer", relationshipType: "routes-to", source: "s3-prod-telemetry-data-lake", target: "func-prod-event-pipeline-consumer" },
 
-    // RDS runs in DB subnet
-    { id: "l-rds-sub5", sourceResourceId: "db-prod-aurora-pg-primary", targetResourceId: "subnet-05db1a", relationshipType: "runs-in", source: "db-prod-aurora-pg-primary", target: "subnet-05db1a" },
+    // Incomplete node inferred wiring: demo-1d-1 → NAT Gateway (routes-to)
+    {
+      id: "l-demo-nat",
+      sourceResourceId: "i-0demo1d1accessdenied",
+      targetResourceId: "nat-05544332211009988",
+      relationshipType: "routes-to",
+      source: "i-0demo1d1accessdenied",
+      target: "nat-05544332211009988",
+      isInferred: true,
+      unverifiedReason: "Connection inferred via default route 0.0.0.0/0; endpoint ENI unconfirmed due to ec2:DescribeNetworkInterfaces AccessDenied",
+    },
   ],
 };

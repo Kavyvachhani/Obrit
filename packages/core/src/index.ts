@@ -5,6 +5,7 @@ export type {
   Provider,
   AuthMethod,
   ResourceStatus,
+  ScanErrorInfo,
   Resource,
   LiveMetric,
   Edge,

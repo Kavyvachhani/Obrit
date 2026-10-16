@@ -6,7 +6,16 @@ export type AuthMethod = "access_key" | "assume_role";
 
 // ─── Resource ────────────────────────────────────────────────────────────────
 
-export type ResourceStatus = "healthy" | "degraded" | "unknown";
+export type ResourceStatus = "healthy" | "degraded" | "failed" | "exposed" | "incomplete" | "unknown";
+
+export interface ScanErrorInfo {
+  code: "AccessDenied" | "Timeout" | "RateLimited" | "PartialResponse" | "Unknown" | string;
+  operation?: string; // e.g. "ec2:DescribeNetworkInterfaces"
+  message: string; // Plain language: e.g. "ec2:DescribeNetworkInterfaces returned AccessDenied for this resource"
+  lastSuccessScan?: string; // e.g. "3 cycles ago"
+  cyclesFailing?: number;
+  suggestedFix?: string; // e.g. "Attach policy with ec2:DescribeNetworkInterfaces to scan IAM role"
+}
 
 export interface Resource {
   id: string;
@@ -20,6 +29,7 @@ export interface Resource {
   rawConfig: Record<string, unknown>;
   status: ResourceStatus;
   lastSeenAt: string; // ISO 8601 timestamp
+  scanError?: ScanErrorInfo; // Detailed pipeline scan gap info if status is "incomplete"
 }
 
 // ─── Edge ────────────────────────────────────────────────────────────────────
@@ -36,6 +46,8 @@ export interface Edge {
   targetResourceId: string;
   relationshipType: string;
   liveMetric?: LiveMetric;
+  isInferred?: boolean; // True if connection is inferred/unverified (e.g. touches an incomplete node)
+  unverifiedReason?: string; // Plain-language explanation for inferred status
 }
 
 // ─── Graph Data (what the renderer consumes) ─────────────────────────────────
