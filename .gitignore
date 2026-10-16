@@ -9,6 +9,7 @@ dist/
 dist-bin/
 dist-release/
 dist-electron/
+dist-installer/
 packages/desktop-electron/public/
 packages/desktop-electron/server-bundle.cjs
 build/
