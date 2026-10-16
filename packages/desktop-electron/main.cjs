@@ -100,7 +100,8 @@ if (!gotTheLock) {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        sandbox: true,
+        sandbox: false,
+        webSecurity: false,
       },
     });
 

@@ -23,9 +23,12 @@ export async function buildServer() {
     crossOriginResourcePolicy: { policy: "cross-origin" },
   });
 
-  // CORS for frontend dev server
+  // CORS for frontend dev server & desktop app
   await app.register(cors, {
-    origin: true,
+    origin: (_origin, cb) => {
+      // Allow all origins including file:// (origin null) and localhost
+      cb(null, true);
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   });

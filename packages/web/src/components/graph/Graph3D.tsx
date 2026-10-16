@@ -41,7 +41,10 @@ export const Graph3D: React.FC = () => {
     setEdgeTooltip,
     toggleSecurityHeatmap,
     setActiveThreatScenario,
+    setViewMode,
   } = useGraphStore();
+
+  const [isRotateEnabled, setIsRotateEnabled] = React.useState(false);
 
   const { filteredNodes, filteredLinks } = React.useMemo(() => {
     return filterGraphData(nodes, links, filterCategory, searchQuery);
@@ -356,8 +359,8 @@ export const Graph3D: React.FC = () => {
     platesGroupRef.current = platesGroup;
     scene.add(platesGroup);
 
-    // ── Initial Camera: Classic AWS Isometric Overview ──
-    fg.cameraPosition({ x: 180, y: 760, z: 580 }, { x: 120, y: -40, z: 0 }, 1000);
+    // ── Initial Camera: Top-Down Architectural Blueprint Map (Crystal clear, zero tilt) ──
+    fg.cameraPosition({ x: 120, y: 1050, z: 0.1 }, { x: 120, y: -40, z: 0 }, 1000);
 
     // Billboard rotation on camera move
     const updateBillboards = () => {
@@ -377,10 +380,11 @@ export const Graph3D: React.FC = () => {
         // Enforce architectural isometric boundaries: strictly prevent viewing below ground or flipping upside-down!
         controls.maxPolarAngle = Math.PI / 2.22; // ~81° - prevents camera sinking below floor plane
         controls.minPolarAngle = Math.PI / 6;    // ~30° - prevents zenith gimbal lock
+        controls.enableRotate = false;           // ROTATION LOCKED BY DEFAULT for stable map readability
         controls.enableDamping = true;
-        controls.dampingFactor = 0.08;
-        controls.rotateSpeed = 0.75;
-        controls.panSpeed = 0.8;
+        controls.dampingFactor = 0.12;
+        controls.rotateSpeed = 0.6;
+        controls.panSpeed = 1.2;
         controls.screenSpacePanning = true;
         if (typeof controls.addEventListener === "function") {
           controls.addEventListener("change", updateBillboards);
@@ -604,6 +608,17 @@ export const Graph3D: React.FC = () => {
     });
   }, [ingressBounds, vpcBounds, azBounds, subnetBounds, regionalBounds]);
 
+  // Sync rotation toggle with 3D controls
+  useEffect(() => {
+    if (!graphRef.current) return;
+    try {
+      const controls = (graphRef.current as any).controls();
+      if (controls) {
+        controls.enableRotate = isRotateEnabled;
+      }
+    } catch {}
+  }, [isRotateEnabled]);
+
   // Camera controls & presets
   const handleCameraPreset = (preset: "iso" | "top" | "elevation" | "fit") => {
     if (!graphRef.current) return;
@@ -614,7 +629,7 @@ export const Graph3D: React.FC = () => {
 
     switch (preset) {
       case "iso":
-        // Classic 50° high isometric perspective matching Cisco SDA reference diagram
+        // 45° elevation perspective
         graphRef.current.cameraPosition(
           { x: centerX + (isBig ? 120 : 60), y: isBig ? 960 : 760, z: isBig ? 760 : 580 },
           { x: centerX, y: centerY, z: centerZ },
@@ -622,9 +637,9 @@ export const Graph3D: React.FC = () => {
         );
         break;
       case "top":
-        // 90-degree blueprint plan view
+        // 90-degree blueprint plan view (flat, ultra-clear)
         graphRef.current.cameraPosition(
-          { x: centerX, y: isBig ? 1500 : 1100, z: 0.1 },
+          { x: centerX, y: isBig ? 1400 : 1050, z: 0.1 },
           { x: centerX, y: centerY, z: centerZ },
           1000
         );
@@ -721,20 +736,45 @@ export const Graph3D: React.FC = () => {
       )}
 
       {/* Floating Viewport Controls & Camera Presets */}
-      <div className="absolute bottom-5 right-5 z-10 flex items-center gap-1.5 p-1.5 bg-[#151A24]/90 backdrop-blur-md border border-[#262D3A] rounded-xl shadow-2xl">
+      <div className="absolute bottom-5 right-5 z-10 flex items-center gap-1.5 p-1.5 bg-[#151A24]/92 backdrop-blur-md border border-[#262D3A] rounded-xl shadow-2xl">
+        {/* Rotation Lock Toggle Button */}
+        <button
+          onClick={() => setIsRotateEnabled((prev) => !prev)}
+          className={`px-2.5 py-1.5 rounded-lg transition-all text-[11px] font-semibold flex items-center gap-1.5 ${
+            isRotateEnabled
+              ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+              : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+          }`}
+          title={isRotateEnabled ? "3D Rotation is ON — Click to lock rotation and pan only" : "Rotation Locked — Dragging pans the map without spinning"}
+        >
+          <span>{isRotateEnabled ? "🔄 3D Tilt: ON" : "🔒 Rotation: LOCKED"}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setIsRotateEnabled(false);
+            handleCameraPreset("top");
+          }}
+          className="px-2.5 py-1.5 text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-lg transition-all text-[11px] font-medium"
+          title="Top-Down Blueprint Plan View (Flat, Clean, Readable)"
+        >
+          🗺️ Top Map
+        </button>
+
         <button
           onClick={() => handleCameraPreset("iso")}
           className="px-2.5 py-1.5 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[11px] font-medium"
-          title="3D Isometric View (45°)"
+          title="3D Isometric Angle"
         >
-          📐 3D Iso
+          📐 3D Angle
         </button>
+
         <button
-          onClick={() => handleCameraPreset("top")}
-          className="px-2.5 py-1.5 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[11px] font-medium"
-          title="Top-Down Blueprint Plan (90°)"
+          onClick={() => setViewMode("2d")}
+          className="px-2.5 py-1.5 text-cyan-300 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-700/50 rounded-lg transition-all text-[11px] font-semibold"
+          title="Switch to 2D Schematic View"
         >
-          🗺️ Blueprint
+          📊 Switch to 2D
         </button>
         <button
           onClick={() => handleCameraPreset("elevation")}

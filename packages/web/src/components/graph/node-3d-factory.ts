@@ -1041,12 +1041,12 @@ function build3DLabelSprite(
     depthWrite: false,
   });
 
+  // Humanized, high-legibility scale matching architectural schematics
   const sprite = new THREE.Sprite(spriteMat);
-  // Humanized, readable scale matching architectural schematics
-  const scaleW = isCluster ? 132 : 118;
+  const scaleW = isCluster ? 180 : 160;
   const scaleH = scaleW * (250 / (isCluster ? 1080 : 960));
   sprite.scale.set(scaleW, scaleH, 1);
-  sprite.position.y = 58; // Positioned cleanly above callout stem
+  sprite.position.y = 52; // Positioned cleanly above callout stem
   sprite.userData = { isBillboardCard: true, nodeId: node.id };
 
   return sprite;
