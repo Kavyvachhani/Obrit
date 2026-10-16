@@ -6,7 +6,10 @@ import type {
   ConnectAccountRequest,
 } from "@orbit/core";
 
-const API_BASE = "/api";
+const API_BASE =
+  typeof window !== "undefined" && window.location.protocol === "file:"
+    ? "http://127.0.0.1:4000/api"
+    : "/api";
 
 export async function fetchAccounts(): Promise<ConnectedAccountSummary[]> {
   const res = await fetch(`${API_BASE}/accounts`);

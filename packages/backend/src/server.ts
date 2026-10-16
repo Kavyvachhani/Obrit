@@ -14,18 +14,7 @@ const HOST = process.env["HOST"] || "0.0.0.0";
 
 export async function buildServer() {
   const app = fastify({
-    logger: {
-      transport:
-        process.env["NODE_ENV"] !== "production"
-          ? {
-              target: "pino-pretty",
-              options: {
-                translateTime: "HH:MM:ss Z",
-                ignore: "pid,hostname",
-              },
-            }
-          : undefined,
-    },
+    logger: false,
   });
 
   // Security headers via Helmet with relaxed CSP for dev
@@ -148,7 +137,9 @@ async function start() {
     console.log(`Orbit Backend listening on http://${HOST}:${PORT}`);
   } catch (err) {
     console.error("Failed to start Orbit backend:", err);
-    process.exit(1);
+    if (process.env["ORBIT_DESKTOP"] !== "true") {
+      process.exit(1);
+    }
   }
 }
 
