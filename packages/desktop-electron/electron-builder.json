@@ -24,11 +24,15 @@
     ]
   },
   "nsis": {
+    "artifactName": "Orbit-Setup-x64.exe",
     "oneClick": true,
     "perMachine": false,
     "allowToChangeInstallationDirectory": false,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
     "runAfterFinish": true
+  },
+  "portable": {
+    "artifactName": "Orbit-Portable-x64.exe"
   }
 }

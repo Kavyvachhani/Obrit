@@ -48,3 +48,25 @@ jobs:
         with:
           name: Orbit-Windows-Installers
           path: dist-installer/*.exe
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v0.1.0
+          name: "Orbit v0.1.0 — Windows Release"
+          body: |
+            ## Orbit v0.1.0 Windows Release
+
+            ### Recommended Downloads:
+            - **[Orbit-Setup-x64.exe](https://github.com/Kavyvachhani/Obrit/releases/download/v0.1.0/Orbit-Setup-x64.exe)** — Recommended 1-Click Installer (Installs app + creates Desktop & Start Menu shortcuts).
+            - **[Orbit-Portable-x64.exe](https://github.com/Kavyvachhani/Obrit/releases/download/v0.1.0/Orbit-Portable-x64.exe)** — Standalone portable executable (Zero installation needed, all DLLs bundled directly inside the single .exe).
+
+            Both files are self-contained and eliminate any missing `ffmpeg.dll` or dependency issues.
+          draft: false
+          prerelease: false
+          files: |
+            dist-installer/Orbit-Setup-x64.exe
+            dist-installer/Orbit-Portable-x64.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
