@@ -653,35 +653,35 @@ function build3DDeviceMesh(
   const statusColor = getStatusColor(visualStatus);
   const brandColor = new THREE.Color(style.color);
 
-  // 1. Ground Pedestal / Shadow Plate
-  const pedestalRadius = 18;
-  const pedestalGeo = new THREE.CylinderGeometry(pedestalRadius, pedestalRadius + 2, 2, 32);
+  // 1. Ground Pedestal / Shadow Plate (Humanized architectural disc)
+  const pedestalRadius = 22;
+  const pedestalGeo = new THREE.CylinderGeometry(pedestalRadius, pedestalRadius + 2.5, 2.5, 32);
   const pedestalMat = new THREE.MeshStandardMaterial({
-    color: 0x111622,
-    metalness: 0.6,
-    roughness: 0.4,
+    color: 0x141A26,
+    metalness: 0.5,
+    roughness: 0.5,
   });
   const pedestal = new THREE.Mesh(pedestalGeo, pedestalMat);
-  pedestal.position.y = 1;
+  pedestal.position.y = 1.25;
   modelGroup.add(pedestal);
 
   // Glowing status halo ring on top of the pedestal
-  const haloGeo = new THREE.RingGeometry(pedestalRadius * 0.75, pedestalRadius * 0.98, 32);
+  const haloGeo = new THREE.RingGeometry(pedestalRadius * 0.72, pedestalRadius * 0.98, 32);
   const haloMat = new THREE.MeshBasicMaterial({
     color: new THREE.Color(statusColor),
     side: THREE.DoubleSide,
     transparent: true,
-    opacity: isSelected ? 0.95 : isHovered ? 0.8 : visualStatus === "incomplete" ? 0.4 : 0.6,
+    opacity: isSelected ? 0.95 : isHovered ? 0.85 : visualStatus === "incomplete" ? 0.45 : 0.7,
   });
   const halo = new THREE.Mesh(haloGeo, haloMat);
   halo.rotation.x = -Math.PI / 2;
-  halo.position.y = 2.1;
+  halo.position.y = 2.6;
   modelGroup.add(halo);
 
   // 2. Primary 3D Device Geometry based on AWS 3D Icon Family
   if (isCluster) {
     // Holographic Fleet Cluster Block
-    const clusterGeo = new THREE.BoxGeometry(26, 26, 26);
+    const clusterGeo = new THREE.BoxGeometry(30, 30, 30);
     const clusterMat = new THREE.MeshStandardMaterial({
       color: 0x0284C7,
       metalness: 0.7,
@@ -690,22 +690,22 @@ function build3DDeviceMesh(
       emissiveIntensity: 0.35,
     });
     const clusterMesh = new THREE.Mesh(clusterGeo, clusterMat);
-    clusterMesh.position.y = 15;
+    clusterMesh.position.y = 17;
     modelGroup.add(clusterMesh);
 
     // Glowing wireframe cage around cluster
-    const cageGeo = new THREE.BoxGeometry(28, 28, 28);
+    const cageGeo = new THREE.BoxGeometry(32, 32, 32);
     const cageWire = new THREE.LineSegments(
       new THREE.EdgesGeometry(cageGeo),
       new THREE.LineBasicMaterial({ color: 0x38BDF8, linewidth: 2 })
     );
-    cageWire.position.y = 15;
+    cageWire.position.y = 17;
     modelGroup.add(cageWire);
   } else if (style.iconType === "ec2") {
-    // AWS EC2: Standing 3D Server Blade Chassis (Box: 22 x 28 x 18)
-    const serverGeo = new THREE.BoxGeometry(22, 28, 18);
+    // AWS EC2: Standing 3D Server Blade Chassis (Box: 26 x 32 x 20)
+    const serverGeo = new THREE.BoxGeometry(26, 32, 20);
     const bodyMat = new THREE.MeshStandardMaterial({
-      color: 0x222836,
+      color: 0x242A38,
       metalness: 0.8,
       roughness: 0.3,
     });
@@ -714,23 +714,22 @@ function build3DDeviceMesh(
       metalness: 0.5,
       roughness: 0.4,
     });
-    // Materials for [right, left, top, bottom, front, back]
     const materials = [bodyMat, bodyMat, bodyMat, bodyMat, frontMat, bodyMat];
     const server = new THREE.Mesh(serverGeo, materials);
-    server.position.y = 16;
+    server.position.y = 18;
     modelGroup.add(server);
 
     // Orange server top accent trim
-    const trimGeo = new THREE.BoxGeometry(22.6, 2, 18.6);
+    const trimGeo = new THREE.BoxGeometry(26.6, 2.5, 20.6);
     const trimMat = new THREE.MeshBasicMaterial({ color: 0xFF9900 });
     const trim = new THREE.Mesh(trimGeo, trimMat);
-    trim.position.y = 30.2;
+    trim.position.y = 34.5;
     modelGroup.add(trim);
   } else if (style.iconType === "lambda") {
-    // AWS Lambda: Standing Golden Function Cube (22 x 22 x 22)
-    const cubeGeo = new THREE.BoxGeometry(22, 22, 22);
+    // AWS Lambda: Standing Golden Function Cube (26 x 26 x 26)
+    const cubeGeo = new THREE.BoxGeometry(26, 26, 26);
     const bodyMat = new THREE.MeshStandardMaterial({
-      color: 0x2B1A09,
+      color: 0x2E1C0A,
       metalness: 0.7,
       roughness: 0.3,
     });
@@ -741,61 +740,59 @@ function build3DDeviceMesh(
     });
     const materials = [bodyMat, bodyMat, bodyMat, bodyMat, frontMat, bodyMat];
     const cube = new THREE.Mesh(cubeGeo, materials);
-    cube.position.y = 13;
+    cube.position.y = 15;
     modelGroup.add(cube);
 
-    // Gold accent frame
     const frameWire = new THREE.LineSegments(
       new THREE.EdgesGeometry(cubeGeo),
       new THREE.LineBasicMaterial({ color: 0xED7100, linewidth: 2 })
     );
-    frameWire.position.y = 13;
+    frameWire.position.y = 15;
     modelGroup.add(frameWire);
   } else if (style.iconType === "rds") {
-    // AWS RDS: Multi-tier 3D Database Cylinder Stack (Cylinder: 12 radius, 26 height)
-    const dbGeo = new THREE.CylinderGeometry(12, 12, 26, 32);
+    // AWS RDS: Multi-tier 3D Database Cylinder Stack (Cylinder: 14 radius, 30 height)
+    const dbGeo = new THREE.CylinderGeometry(14, 14, 30, 32);
     const dbMat = new THREE.MeshStandardMaterial({
       color: 0x1D4ED8,
       metalness: 0.75,
       roughness: 0.25,
     });
     const dbMesh = new THREE.Mesh(dbGeo, dbMat);
-    dbMesh.position.y = 15;
+    dbMesh.position.y = 17;
     modelGroup.add(dbMesh);
 
     // 3 Metallic Platter Ring Dividers (Image 4 reference)
     for (let i = -1; i <= 1; i++) {
-      const ringGeo = new THREE.TorusGeometry(12.3, 0.8, 8, 32);
+      const ringGeo = new THREE.TorusGeometry(14.3, 0.9, 8, 32);
       const ringMat = new THREE.MeshBasicMaterial({ color: 0x93C5FD });
       const ring = new THREE.Mesh(ringGeo, ringMat);
       ring.rotation.x = Math.PI / 2;
-      ring.position.y = 15 + i * 7.5;
+      ring.position.y = 17 + i * 8.5;
       modelGroup.add(ring);
     }
   } else if (style.iconType === "s3") {
-    // AWS S3: Tapered 3D Storage Bucket (Cylinder: top 14, bottom 10, height 24)
-    const bucketGeo = new THREE.CylinderGeometry(14, 10, 24, 32);
+    // AWS S3: Tapered 3D Storage Bucket (Cylinder: top 16, bottom 11, height 28)
+    const bucketGeo = new THREE.CylinderGeometry(16, 11, 28, 32);
     const bucketMat = new THREE.MeshStandardMaterial({
       color: 0xDC2626,
       metalness: 0.7,
       roughness: 0.3,
     });
     const bucket = new THREE.Mesh(bucketGeo, bucketMat);
-    bucket.position.y = 14;
+    bucket.position.y = 16;
     modelGroup.add(bucket);
 
-    // Bucket Top Rim
-    const rimGeo = new THREE.TorusGeometry(14.2, 1.2, 12, 32);
+    const rimGeo = new THREE.TorusGeometry(16.2, 1.4, 12, 32);
     const rimMat = new THREE.MeshBasicMaterial({ color: 0xFCA5A5 });
     const rim = new THREE.Mesh(rimGeo, rimMat);
     rim.rotation.x = Math.PI / 2;
-    rim.position.y = 26;
+    rim.position.y = 30;
     modelGroup.add(rim);
   } else if (style.iconType === "alb" || style.iconType === "nat" || style.iconType === "igw") {
-    // AWS Networking: Standing 3D Switch / Router Appliance (Box: 26 x 15 x 22)
-    const switchGeo = new THREE.BoxGeometry(26, 15, 22);
+    // AWS Networking: Standing 3D Switch / Router Appliance (Box: 30 x 18 x 24)
+    const switchGeo = new THREE.BoxGeometry(30, 18, 24);
     const bodyMat = new THREE.MeshStandardMaterial({
-      color: 0x241C38,
+      color: 0x28203E,
       metalness: 0.8,
       roughness: 0.3,
     });
@@ -806,21 +803,20 @@ function build3DDeviceMesh(
     });
     const materials = [bodyMat, bodyMat, bodyMat, bodyMat, frontMat, bodyMat];
     const sw = new THREE.Mesh(switchGeo, materials);
-    sw.position.y = 9.5;
+    sw.position.y = 11;
     modelGroup.add(sw);
 
-    // Violet top accent wire
     const swWire = new THREE.LineSegments(
       new THREE.EdgesGeometry(switchGeo),
       new THREE.LineBasicMaterial({ color: 0x8C4FFF, linewidth: 2 })
     );
-    swWire.position.y = 9.5;
+    swWire.position.y = 11;
     modelGroup.add(swWire);
   } else if (style.iconType === "sg" || style.iconType === "iam") {
-    // AWS Security: Standing 3D Security Vault Tower (Box: 20 x 26 x 18)
-    const secGeo = new THREE.BoxGeometry(20, 26, 18);
+    // AWS Security: Standing 3D Security Vault Tower (Box: 22 x 30 x 20)
+    const secGeo = new THREE.BoxGeometry(22, 30, 20);
     const bodyMat = new THREE.MeshStandardMaterial({
-      color: 0x2A141A,
+      color: 0x2E161D,
       metalness: 0.8,
       roughness: 0.3,
     });
@@ -831,41 +827,53 @@ function build3DDeviceMesh(
     });
     const materials = [bodyMat, bodyMat, bodyMat, bodyMat, frontMat, bodyMat];
     const sec = new THREE.Mesh(secGeo, materials);
-    sec.position.y = 15;
+    sec.position.y = 17;
     modelGroup.add(sec);
 
-    // Red perimeter wire
     const secWire = new THREE.LineSegments(
       new THREE.EdgesGeometry(secGeo),
       new THREE.LineBasicMaterial({ color: 0xDD344C, linewidth: 2 })
     );
-    secWire.position.y = 15;
+    secWire.position.y = 17;
     modelGroup.add(secWire);
   } else {
     // Default / Generic AWS 3D Resource Prism
-    const genGeo = new THREE.BoxGeometry(20, 22, 20);
+    const genGeo = new THREE.BoxGeometry(24, 26, 24);
     const genMat = new THREE.MeshStandardMaterial({
       color: brandColor,
       metalness: 0.65,
       roughness: 0.35,
     });
     const genMesh = new THREE.Mesh(genGeo, genMat);
-    genMesh.position.y = 13;
+    genMesh.position.y = 15;
     modelGroup.add(genMesh);
 
     const wire = new THREE.LineSegments(
       new THREE.EdgesGeometry(genGeo),
       new THREE.LineBasicMaterial({ color: 0xFFFFFF, linewidth: 1.5 })
     );
-    wire.position.y = 13;
+    wire.position.y = 15;
     modelGroup.add(wire);
   }
+
+  // 3. Architectural Callout Stem connecting figurine to floating label badge
+  const stemMat = new THREE.LineBasicMaterial({
+    color: new THREE.Color(statusColor),
+    transparent: true,
+    opacity: 0.65,
+  });
+  const stemGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 32, 0),
+    new THREE.Vector3(0, 48, 0),
+  ]);
+  const stem = new THREE.Line(stemGeo, stemMat);
+  modelGroup.add(stem);
 
   return modelGroup;
 }
 
 /* ─────────────────────────────────────────────────────────────
-   3D UPRIGHT CALLOUT LABEL SPRITE (Cisco SDA & AWS Style)
+   3D UPRIGHT CALLOUT LABEL SPRITE (Human-Crafted & High Contrast)
    
    Creates an upright, high-resolution Canvas Sprite that 
    floats above the 3D figurine. Because it's a THREE.Sprite,
@@ -883,12 +891,12 @@ function build3DLabelSprite(
   const statusColor = getStatusColor(visualStatus);
   const isIncomplete = visualStatus === "incomplete";
 
-  const cacheKey = `sprite_v3_${node.id}_${isSelected}_${isHovered}_${visualStatus}`;
+  const cacheKey = `sprite_v4_${node.id}_${isSelected}_${isHovered}_${visualStatus}`;
   let texture = textureCache.get(cacheKey);
 
   if (!texture) {
-    const W = isCluster ? 1024 : 880;
-    const H = 260;
+    const W = isCluster ? 1080 : 960;
+    const H = 250;
     const canvas = document.createElement("canvas");
     canvas.width = W;
     canvas.height = H;
@@ -896,30 +904,19 @@ function build3DLabelSprite(
 
     ctx.clearRect(0, 0, W, H);
 
-    const pad = 12;
+    const pad = 10;
     const w = W - pad * 2;
     const h = H - pad * 2;
 
-    // Drop shadow
-    ctx.shadowColor = "rgba(0, 0, 0, 0.85)";
-    ctx.shadowBlur = 24;
-    ctx.shadowOffsetY = 8;
+    // Solid high-contrast backing (no murkiness)
+    ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+    ctx.shadowBlur = 28;
+    ctx.shadowOffsetY = 10;
 
-    // Pill background: Deep high-contrast obsidian slate
-    const bgGrad = ctx.createLinearGradient(pad, pad, pad, pad + h);
-    if (isSelected) {
-      bgGrad.addColorStop(0, "#1F293D");
-      bgGrad.addColorStop(1, "#111827");
-    } else if (isHovered) {
-      bgGrad.addColorStop(0, "#1A2234");
-      bgGrad.addColorStop(1, "#0D111A");
-    } else {
-      bgGrad.addColorStop(0, "#131824");
-      bgGrad.addColorStop(1, "#0A0D14");
-    }
-    ctx.fillStyle = bgGrad;
+    // Rich dark slate solid badge backing
+    ctx.fillStyle = isSelected ? "#1E2738" : isHovered ? "#182030" : "#111724";
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(pad, pad, w, h, 28);
+    if (ctx.roundRect) ctx.roundRect(pad, pad, w, h, 24);
     else ctx.rect(pad, pad, w, h);
     ctx.fill();
 
@@ -928,8 +925,8 @@ function build3DLabelSprite(
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
 
-    // High-contrast Border
-    ctx.lineWidth = isSelected ? 5.5 : isHovered ? 4.5 : 3.0;
+    // Crisp high-contrast perimeter
+    ctx.lineWidth = isSelected ? 6.0 : isHovered ? 4.5 : 3.0;
     if (isIncomplete) {
       ctx.strokeStyle = "#8893A6";
       ctx.setLineDash([14, 8]);
@@ -943,7 +940,7 @@ function build3DLabelSprite(
     // Top color accent bar
     ctx.fillStyle = isIncomplete ? "#8893A6" : (isCluster ? "#38BDF8" : statusColor);
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(pad, pad, w, 8, [28, 28, 0, 0]);
+    if (ctx.roundRect) ctx.roundRect(pad, pad, w, 8, [24, 24, 0, 0]);
     else ctx.rect(pad, pad, w, 8);
     ctx.fill();
 
@@ -961,7 +958,7 @@ function build3DLabelSprite(
     );
 
     // Text Content Area
-    const textLeft = iconX + iconSize + 22;
+    const textLeft = iconX + iconSize + 24;
 
     // Service category tag
     ctx.font = "bold 26px 'Inter', sans-serif";
@@ -971,26 +968,26 @@ function build3DLabelSprite(
     const tagText = isCluster
       ? `FLEET CLUSTER • ${(node.rawConfig as any).totalCount} RESOURCES`
       : isIncomplete
-      ? `${style.shortType} • INCOMPLETE SCAN`
+      ? `${style.shortType} • DATA GAP`
       : `${style.shortType.toUpperCase()}`;
     ctx.fillText(tagText, textLeft, pad + 24);
 
-    // Resource Name (Prominent, ultra-crisp white text)
-    ctx.font = "bold 44px 'Inter', -apple-system, sans-serif";
+    // Resource Name (Large, prominent, high-contrast white text)
+    ctx.font = "bold 46px 'Inter', -apple-system, sans-serif";
     ctx.fillStyle = "#FFFFFF";
     let displayName = node.name || node.id;
-    if (displayName.length > 20) displayName = displayName.slice(0, 19) + "…";
-    ctx.fillText(displayName, textLeft, pad + 62);
+    if (displayName.length > 22) displayName = displayName.slice(0, 21) + "…";
+    ctx.fillText(displayName, textLeft, pad + 60);
 
-    // Configuration / Health detail subtitle
+    // Humanized detail subtitle
     ctx.font = "bold 24px 'JetBrains Mono', monospace";
-    ctx.fillStyle = isIncomplete ? "#CBD5E1" : "#94A3B8";
+    ctx.fillStyle = isIncomplete ? "#CBD5E1" : "#A0AEC0";
     let detail = node.region || "us-east-1";
     if (isCluster) {
       const raw = (node.rawConfig as any) || {};
       detail = `${raw.healthyCount || raw.totalCount} Healthy • Click to Inspect`;
     } else if (isIncomplete && node.scanError) {
-      detail = `⚠️ Gap: ${node.scanError.code}`;
+      detail = `⚠️ Missing IAM: ${node.scanError.code}`;
     } else if (node.rawConfig && (node.rawConfig as any).InstanceType) {
       detail = `${(node.rawConfig as any).InstanceType} • ${(node.rawConfig as any).PrivateIpAddress || "10.0.x.x"}`;
     } else if (node.rawConfig && (node.rawConfig as any).Runtime) {
@@ -1000,17 +997,17 @@ function build3DLabelSprite(
     } else if (node.rawConfig && (node.rawConfig as any).CidrBlock) {
       detail = `${(node.rawConfig as any).CidrBlock}`;
     }
-    ctx.fillText(detail, textLeft, pad + 120);
+    ctx.fillText(detail, textLeft, pad + 118);
 
     // Right-hand Status Pill Badge
     const badgeW = 160;
-    const badgeH = 50;
+    const badgeH = 52;
     const badgeX = W - pad - badgeW - 16;
     const badgeY = pad + (h - badgeH) / 2;
 
     ctx.fillStyle = `${statusColor}22`;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 12);
+    if (ctx.roundRect) ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 14);
     else ctx.rect(badgeX, badgeY, badgeW, badgeH);
     ctx.fill();
 
@@ -1020,7 +1017,7 @@ function build3DLabelSprite(
 
     // Status dot
     ctx.beginPath();
-    ctx.arc(badgeX + 22, badgeY + badgeH / 2, 7, 0, Math.PI * 2);
+    ctx.arc(badgeX + 24, badgeY + badgeH / 2, 7, 0, Math.PI * 2);
     ctx.fillStyle = statusColor;
     ctx.fill();
 
@@ -1045,10 +1042,11 @@ function build3DLabelSprite(
   });
 
   const sprite = new THREE.Sprite(spriteMat);
-  const scaleW = isCluster ? 98 : 88;
-  const scaleH = scaleW * (260 / (isCluster ? 1024 : 880));
+  // Humanized, readable scale matching architectural schematics
+  const scaleW = isCluster ? 132 : 118;
+  const scaleH = scaleW * (250 / (isCluster ? 1080 : 960));
   sprite.scale.set(scaleW, scaleH, 1);
-  sprite.position.y = 48; // Floats cleanly directly above the 3D figurine
+  sprite.position.y = 58; // Positioned cleanly above callout stem
   sprite.userData = { isBillboardCard: true, nodeId: node.id };
 
   return sprite;

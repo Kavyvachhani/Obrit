@@ -86,7 +86,7 @@ export const Graph3D: React.FC = () => {
     if (!containerRef.current) return;
 
     const fg = new ForceGraph3D(containerRef.current)
-      .backgroundColor("#0B0E14")
+      .backgroundColor("#0C101A")
       .showNavInfo(false)
       .nodeThreeObject((node) => {
         const gNode = node as unknown as GraphNode;
@@ -319,24 +319,35 @@ export const Graph3D: React.FC = () => {
     rimLight.position.set(0, -300, 300);
     scene.add(rimLight);
 
-    // ── Deep Slate Architectural Scene Setup ──
-    scene.fog = new THREE.FogExp2(0x0A0D14, 0.00028);
+    // ── Human-Crafted Architectural Scene Background ──
+    scene.fog = new THREE.FogExp2(0x0E131E, 0.00022);
+
+    // Architectural Ground Plate (Soft deep slate CAD drawing surface)
+    const groundGeo = new THREE.PlaneGeometry(6000, 6000);
+    const groundMat = new THREE.MeshBasicMaterial({
+      color: 0x0A0E17,
+      depthWrite: false,
+    });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -81.5;
+    scene.add(ground);
 
     // ── Cisco SDA Isometric Diamond Grid (Rotated 45° across ground plane) ──
-    const gridSize = 4500;
-    const gridDivs = 90;
-    const diamondGrid = new THREE.GridHelper(gridSize, gridDivs, 0x1E293B, 0x101726);
+    const gridSize = 4800;
+    const gridDivs = 96;
+    const diamondGrid = new THREE.GridHelper(gridSize, gridDivs, 0x2A374E, 0x162030);
     diamondGrid.rotation.y = Math.PI / 4;
-    diamondGrid.position.y = -79;
+    diamondGrid.position.y = -79.5;
     (diamondGrid.material as THREE.Material).transparent = true;
-    (diamondGrid.material as THREE.Material).opacity = 0.45;
+    (diamondGrid.material as THREE.Material).opacity = 0.65;
     scene.add(diamondGrid);
 
-    // Secondary orthogonal grid for depth alignment
-    const orthoGrid = new THREE.GridHelper(gridSize, gridDivs / 2, 0x161F2E, 0x0D131F);
-    orthoGrid.position.y = -80;
+    // Secondary orthogonal grid for CAD depth alignment
+    const orthoGrid = new THREE.GridHelper(gridSize, gridDivs / 2, 0x1E2A3E, 0x121A28);
+    orthoGrid.position.y = -80.5;
     (orthoGrid.material as THREE.Material).transparent = true;
-    (orthoGrid.material as THREE.Material).opacity = 0.35;
+    (orthoGrid.material as THREE.Material).opacity = 0.45;
     scene.add(orthoGrid);
 
     // Dynamic Floor Plates Group
@@ -645,9 +656,47 @@ export const Graph3D: React.FC = () => {
   return (
     <div
       onPointerMove={handlePointerMove}
-      className="relative w-full h-full overflow-hidden bg-[#0B0E14]"
+      className="relative w-full h-full overflow-hidden bg-[#0C101A]"
     >
       <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+
+      {/* Humanized Top Architecture Diagram Header Banner */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex items-center gap-2.5 px-5 py-2 bg-[#121824]/92 backdrop-blur-md border border-[#2B374E] rounded-full shadow-2xl">
+        <div className="w-2.5 h-2.5 rounded-full bg-[#3DDC84] shadow-[0_0_8px_#3DDC84]" />
+        <span className="text-xs font-bold text-[#F1F5F9] tracking-wider uppercase">
+          3D AWS Infrastructure Topology Map
+        </span>
+        <span className="text-[11px] text-[#94A3B8] border-l border-[#2B374E] pl-2.5 font-mono">
+          Isometric Studio
+        </span>
+      </div>
+
+      {/* Humanized Architecture Legend (Cisco / AWS CAD Blueprint Style) */}
+      <div className="absolute bottom-5 left-5 z-10 hidden sm:flex flex-col gap-1.5 p-3 bg-[#121824]/94 backdrop-blur-md border border-[#263346] rounded-xl shadow-2xl text-[11px] text-[#CBD5E1]">
+        <div className="text-[10px] font-bold text-[#94A3B8] tracking-widest uppercase mb-0.5 border-b border-[#263346] pb-1">
+          Topology Legend
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#3DDC84]" />
+          <span>Healthy Resource</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#F2B33D]" />
+          <span>Exposed / Security Finding</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#FF5C5C]" />
+          <span>Critical Fault / Stopped</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full border border-dashed border-[#8893A6]" />
+          <span>Data Gap (IAM Permission)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-0.5 bg-[#38BDF8]" />
+          <span>Traffic Route Conduit</span>
+        </div>
+      </div>
 
       {/* Floating Active Threat Simulation HUD */}
       {threatSimulation && (
@@ -753,106 +802,114 @@ interface FloorPlateConfig {
 }
 
 function addFloorPlate(parent: THREE.Object3D, config: FloorPlateConfig) {
-  // Extruded 3D slab box geometry for real depth
-  const slabHeight = 5;
+  // Extruded 3D slab box geometry for solid architectural depth
+  const slabHeight = 6;
   const boxGeo = new THREE.BoxGeometry(config.width, slabHeight, config.depth);
 
-  // Frosted semi-transparent glassmorphic material
-  const mat = new THREE.MeshBasicMaterial({
+  // High-contrast semi-solid architectural material (no murkiness)
+  const mat = new THREE.MeshStandardMaterial({
     color: config.color,
     transparent: true,
-    opacity: Math.min(0.18, config.opacity + 0.05),
+    opacity: Math.max(0.28, config.opacity * 4.5),
+    metalness: 0.1,
+    roughness: 0.8,
     side: THREE.DoubleSide,
   });
   const slabMesh = new THREE.Mesh(boxGeo, mat);
   slabMesh.position.set(config.position[0], config.position[1] - slabHeight / 2, config.position[2]);
   parent.add(slabMesh);
 
-  // Glowing neon perimeter wireframe around the top edges
+  // Glowing perimeter outline around the top edge
   const edgeMat = new THREE.LineBasicMaterial({
     color: config.color,
     transparent: true,
-    opacity: config.edgeOpacity,
+    opacity: Math.max(0.65, config.edgeOpacity),
   });
   const topPlaneGeo = new THREE.PlaneGeometry(config.width, config.depth);
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(topPlaneGeo), edgeMat);
   edges.rotation.x = Math.PI / 2;
-  edges.position.set(config.position[0], config.position[1] + 0.1, config.position[2]);
+  edges.position.set(config.position[0], config.position[1] + 0.15, config.position[2]);
   parent.add(edges);
 
   // 4 Cyber Corner Brackets (L-shaped accents at platform corners)
-  const bracketLen = Math.min(22, config.width * 0.08);
+  const bracketLen = Math.min(24, config.width * 0.08);
   const halfW = config.width / 2;
   const halfD = config.depth / 2;
   const bracketMat = new THREE.LineBasicMaterial({
     color: config.color,
     transparent: true,
-    opacity: Math.min(1.0, config.edgeOpacity * 1.5),
+    opacity: 0.95,
     linewidth: 2,
   });
 
   const bracketPoints: THREE.Vector3[] = [
     // Top-left corner
-    new THREE.Vector3(-halfW, 0.2, -halfD + bracketLen),
-    new THREE.Vector3(-halfW, 0.2, -halfD),
-    new THREE.Vector3(-halfW + bracketLen, 0.2, -halfD),
+    new THREE.Vector3(-halfW, 0.25, -halfD + bracketLen),
+    new THREE.Vector3(-halfW, 0.25, -halfD),
+    new THREE.Vector3(-halfW + bracketLen, 0.25, -halfD),
     // Top-right corner
-    new THREE.Vector3(halfW - bracketLen, 0.2, -halfD),
-    new THREE.Vector3(halfW, 0.2, -halfD),
-    new THREE.Vector3(halfW, 0.2, -halfD + bracketLen),
+    new THREE.Vector3(halfW - bracketLen, 0.25, -halfD),
+    new THREE.Vector3(halfW, 0.25, -halfD),
+    new THREE.Vector3(halfW, 0.25, -halfD + bracketLen),
     // Bottom-left corner
-    new THREE.Vector3(-halfW, 0.2, halfD - bracketLen),
-    new THREE.Vector3(-halfW, 0.2, halfD),
-    new THREE.Vector3(-halfW + bracketLen, 0.2, halfD),
+    new THREE.Vector3(-halfW, 0.25, halfD - bracketLen),
+    new THREE.Vector3(-halfW, 0.25, halfD),
+    new THREE.Vector3(-halfW + bracketLen, 0.25, halfD),
     // Bottom-right corner
-    new THREE.Vector3(halfW - bracketLen, 0.2, halfD),
-    new THREE.Vector3(halfW, 0.2, halfD),
-    new THREE.Vector3(halfW, 0.2, halfD - bracketLen),
+    new THREE.Vector3(halfW - bracketLen, 0.25, halfD),
+    new THREE.Vector3(halfW, 0.25, halfD),
+    new THREE.Vector3(halfW, 0.25, halfD - bracketLen),
   ];
   const bracketGeo = new THREE.BufferGeometry().setFromPoints(bracketPoints);
   const bracketLines = new THREE.LineSegments(bracketGeo, bracketMat);
   bracketLines.position.set(config.position[0], config.position[1], config.position[2]);
   parent.add(bracketLines);
 
-  // Text label sprite
+  // Text label sprite (Crisp human-readable architectural banner)
   const labelCanvas = document.createElement("canvas");
   labelCanvas.width = 1024;
-  labelCanvas.height = 128;
+  labelCanvas.height = 140;
   const ctx = labelCanvas.getContext("2d");
   if (ctx) {
-    ctx.clearRect(0, 0, 1024, 128);
-    // Dark pill backing for readability
-    ctx.fillStyle = "rgba(11, 14, 20, 0.92)";
-    if (ctx.roundRect) ctx.roundRect(4, 12, 1016, 104, 16);
-    else ctx.fillRect(4, 12, 1016, 104);
+    ctx.clearRect(0, 0, 1024, 140);
+    // Dark solid backing for maximum contrast against floor
+    ctx.fillStyle = "#111724";
+    if (ctx.roundRect) ctx.roundRect(4, 10, 1016, 120, 20);
+    else ctx.fillRect(4, 10, 1016, 120);
     ctx.fill();
 
     ctx.strokeStyle = `#${config.color.toString(16).padStart(6, "0")}`;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.stroke();
 
+    // Solid accent tag on left
+    ctx.fillStyle = `#${config.color.toString(16).padStart(6, "0")}`;
+    if (ctx.roundRect) ctx.roundRect(4, 10, 14, 120, [20, 0, 0, 20]);
+    else ctx.fillRect(4, 10, 14, 120);
+    ctx.fill();
+
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 44px Inter, sans-serif";
+    ctx.font = "bold 46px 'Inter', sans-serif";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.fillText(config.label, 28, 64);
+    ctx.fillText(config.label, 36, 70);
   }
   const labelTexture = new THREE.CanvasTexture(labelCanvas);
   labelTexture.minFilter = THREE.LinearFilter;
   const labelSpriteMat = new THREE.SpriteMaterial({
     map: labelTexture,
     transparent: true,
-    opacity: 0.96,
+    opacity: 0.98,
     depthWrite: false,
   });
   const labelSprite = new THREE.Sprite(labelSpriteMat);
-  const spriteW = Math.min(config.width * 0.55, 130);
-  const spriteH = spriteW * (128 / 1024);
+  const spriteW = Math.min(config.width * 0.58, 145);
+  const spriteH = spriteW * (140 / 1024);
   labelSprite.scale.set(spriteW, spriteH, 1);
   labelSprite.position.set(
-    config.position[0] - config.width / 2 + spriteW / 2 + 8,
-    config.position[1] + spriteH / 2 + 3,
-    config.position[2] - config.depth / 2 + 8
+    config.position[0] - config.width / 2 + spriteW / 2 + 10,
+    config.position[1] + spriteH / 2 + 5,
+    config.position[2] - config.depth / 2 + 10
   );
   parent.add(labelSprite);
 }
