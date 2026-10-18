@@ -54,23 +54,23 @@ export function applyStructuredArchitectureLayout(
     // ── DMZ & Cross-AZ Ingress Corridor ──
     "nat-05544332211009988": { x: -260, y: -140, z: -140, tier: 1, az: "us-east-1a" },
     "alb-production-edge": { x: -260, y: 0, z: 0, tier: 1, az: "vpc" },
-    "tg-production-api": { x: -10, y: 0, z: 0, tier: 1, az: "vpc" },
-    "sg-internal-app": { x: -10, y: -140, z: -140, tier: 2, az: "vpc" },
+    "tg-production-api": { x: -20, y: 0, z: 0, tier: 1, az: "vpc" },
+    "sg-internal-app": { x: -20, y: -140, z: -140, tier: 2, az: "vpc" },
 
-    // ── Private App Tier ──
-    "i-091a2b3c4d5e6f701": { x: 230, y: -155, z: -140, tier: 2, az: "us-east-1a" },
-    "func-prod-auth-token-validator": { x: 230, y: -65, z: -70, tier: 2, az: "us-east-1a" },
-    "i-091a2b3c4d5e6f702": { x: 230, y: 75, z: 70, tier: 2, az: "us-east-1b" },
-    "i-0demo1d1accessdenied": { x: 230, y: 175, z: 165, tier: 2, az: "us-east-1b" },
+    // ── Private App Tier (Staggered 2x2 grid for zero horizontal overlap) ──
+    "i-091a2b3c4d5e6f701": { x: 210, y: -155, z: -140, tier: 2, az: "us-east-1a" },
+    "func-prod-auth-token-validator": { x: 290, y: -65, z: -55, tier: 2, az: "us-east-1a" },
+    "i-091a2b3c4d5e6f702": { x: 210, y: 75, z: 65, tier: 2, az: "us-east-1b" },
+    "i-0demo1d1accessdenied": { x: 290, y: 175, z: 155, tier: 2, az: "us-east-1b" },
 
     // ── Database Tier ──
-    "db-prod-aurora-pg-primary": { x: 470, y: -140, z: -140, tier: 3, az: "us-east-1a" },
+    "db-prod-aurora-pg-primary": { x: 480, y: -140, z: -140, tier: 3, az: "us-east-1a" },
 
     // ── Account-level / Global Services Platform (x: 610 to 810) ──
-    "s3-prod-static-distribution-cdn": { x: 710, y: -180, z: -160, tier: 4, az: "regional" },
-    "s3-prod-telemetry-data-lake": { x: 710, y: -60, z: -55, tier: 4, az: "regional" },
-    "func-prod-event-pipeline-consumer": { x: 710, y: 60, z: 55, tier: 4, az: "regional" },
-    "role-ec2-ssm-s3-access": { x: 710, y: 180, z: 160, tier: 4, az: "regional" },
+    "s3-prod-static-distribution-cdn": { x: 720, y: -180, z: -150, tier: 4, az: "regional" },
+    "s3-prod-telemetry-data-lake": { x: 720, y: -60, z: -50, tier: 4, az: "regional" },
+    "func-prod-event-pipeline-consumer": { x: 720, y: 60, z: 50, tier: 4, az: "regional" },
+    "role-ec2-ssm-s3-access": { x: 720, y: 180, z: 150, tier: 4, az: "regional" },
   };
 
   const positionedNodes: PositionedNode[] = [];
@@ -757,9 +757,12 @@ export function applyStructuredArchitectureLayout(
 export function resolveNodeCollisions(
   nodes: PositionedNode[],
   is3D = false,
-  minDistance = 80
+  _minDistance = 80
 ): PositionedNode[] {
-  const iterations = 15;
+  const minSepX = is3D ? 165 : 200;
+  const minSepY = is3D ? 75 : 75;
+  const iterations = 20;
+
   for (let iter = 0; iter < iterations; iter++) {
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -769,31 +772,31 @@ export function resolveNodeCollisions(
 
         const dx = n1.x - n2.x;
         const dy = is3D ? (n1.z ?? 0) - (n2.z ?? 0) : n1.y - n2.y;
-        const dist = Math.hypot(dx, dy);
 
-        if (dist < minDistance) {
-          const overlap = minDistance - dist;
-          const angle = dist > 0.001 ? Math.atan2(dy, dx) : ((i + 1) * 0.73 + (j + 1) * 0.37);
-          const moveDist = overlap / 2 + 0.5;
+        const overlapX = minSepX - Math.abs(dx);
+        const overlapY = minSepY - Math.abs(dy);
 
-          const offsetX = Math.cos(angle) * moveDist;
-          const offsetY = Math.sin(angle) * moveDist;
-
-          n1.x += offsetX;
-          n2.x -= offsetX;
-          n1.fx = n1.x;
-          n2.fx = n2.x;
-
-          if (is3D) {
-            n1.z = (n1.z ?? 0) + offsetY;
-            n2.z = (n2.z ?? 0) - offsetY;
-            n1.fz = n1.z;
-            n2.fz = n2.z;
+        if (overlapX > 0 && overlapY > 0) {
+          // Both axes overlap: rectangular cards are colliding!
+          if (overlapX < overlapY) {
+            const shiftX = (overlapX / 2 + 1) * (dx >= 0 ? 1 : -1);
+            n1.x += shiftX;
+            n2.x -= shiftX;
+            n1.fx = n1.x;
+            n2.fx = n2.x;
           } else {
-            n1.y += offsetY;
-            n2.y -= offsetY;
-            n1.fy = n1.y;
-            n2.fy = n2.y;
+            const shiftY = (overlapY / 2 + 1) * (dy >= 0 ? 1 : -1);
+            if (is3D) {
+              n1.z = (n1.z ?? 0) + shiftY;
+              n2.z = (n2.z ?? 0) - shiftY;
+              n1.fz = n1.z;
+              n2.fz = n2.z;
+            } else {
+              n1.y += shiftY;
+              n2.y -= shiftY;
+              n1.fy = n1.y;
+              n2.fy = n2.y;
+            }
           }
         }
       }

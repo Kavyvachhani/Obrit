@@ -970,8 +970,8 @@ function build3DLabelSprite(
   let texture = textureCache.get(cacheKey);
 
   if (!texture) {
-    const W = isCluster ? 1080 : 960;
-    const H = 250;
+    const W = isCluster ? 1080 : 1000;
+    const H = 260;
     const canvas = document.createElement("canvas");
     canvas.width = W;
     canvas.height = H;
@@ -983,15 +983,15 @@ function build3DLabelSprite(
     const w = W - pad * 2;
     const h = H - pad * 2;
 
-    // Solid high-contrast backing (no murkiness)
-    ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
-    ctx.shadowBlur = 28;
-    ctx.shadowOffsetY = 10;
+    // Solid high-contrast backing
+    ctx.shadowColor = "rgba(0, 0, 0, 0.95)";
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 8;
 
-    // Rich dark slate solid badge backing
-    ctx.fillStyle = isSelected ? "#1E2738" : isHovered ? "#182030" : "#111724";
+    // Rich dark graphite solid badge backing (crystal clear contrast against 3D scene)
+    ctx.fillStyle = isSelected ? "#1E2738" : isHovered ? "#182030" : "#101520";
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(pad, pad, w, h, 24);
+    if (ctx.roundRect) ctx.roundRect(pad, pad, w, h, 22);
     else ctx.rect(pad, pad, w, h);
     ctx.fill();
 
@@ -1000,8 +1000,8 @@ function build3DLabelSprite(
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
 
-    // Crisp high-contrast perimeter
-    ctx.lineWidth = isSelected ? 6.0 : isHovered ? 4.5 : 3.0;
+    // Crisp perimeter
+    ctx.lineWidth = isSelected ? 6.0 : isHovered ? 4.5 : 3.5;
     if (isIncomplete) {
       ctx.strokeStyle = "#8893A6";
       ctx.setLineDash([14, 8]);
@@ -1015,12 +1015,12 @@ function build3DLabelSprite(
     // Top color accent bar
     ctx.fillStyle = isIncomplete ? "#8893A6" : (isCluster ? "#38BDF8" : statusColor);
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(pad, pad, w, 8, [24, 24, 0, 0]);
+    if (ctx.roundRect) ctx.roundRect(pad, pad, w, 8, [22, 22, 0, 0]);
     else ctx.rect(pad, pad, w, 8);
     ctx.fill();
 
     // Service Icon Badge (Left)
-    const iconSize = 135;
+    const iconSize = 138;
     const iconX = pad + 24;
     const iconY = pad + (h - iconSize) / 2 + 4;
     drawOfficialAwsVectorIcon(
@@ -1033,10 +1033,10 @@ function build3DLabelSprite(
     );
 
     // Text Content Area
-    const textLeft = iconX + iconSize + 24;
+    const textLeft = iconX + iconSize + 26;
 
     // Service category tag
-    ctx.font = "bold 26px 'Inter', sans-serif";
+    ctx.font = "bold 28px 'Inter', sans-serif";
     ctx.fillStyle = isIncomplete ? "#94A3B8" : (isCluster ? "#38BDF8" : style.color);
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
@@ -1047,15 +1047,15 @@ function build3DLabelSprite(
       : `${style.shortType.toUpperCase()}`;
     ctx.fillText(tagText, textLeft, pad + 24);
 
-    // Resource Name (Large, prominent, high-contrast white text)
-    ctx.font = "bold 46px 'Inter', -apple-system, sans-serif";
+    // Resource Name (Large, bold, high-contrast white text)
+    ctx.font = "bold 50px 'Inter', -apple-system, sans-serif";
     ctx.fillStyle = "#FFFFFF";
     let displayName = node.name || node.id;
     if (displayName.length > 22) displayName = displayName.slice(0, 21) + "…";
-    ctx.fillText(displayName, textLeft, pad + 60);
+    ctx.fillText(displayName, textLeft, pad + 62);
 
     // Humanized detail subtitle
-    ctx.font = "bold 24px 'JetBrains Mono', monospace";
+    ctx.font = "bold 26px 'JetBrains Mono', monospace";
     ctx.fillStyle = isIncomplete ? "#CBD5E1" : "#A0AEC0";
     let detail = node.region || "us-east-1";
     if (isCluster) {
@@ -1072,11 +1072,11 @@ function build3DLabelSprite(
     } else if (node.rawConfig && (node.rawConfig as any).CidrBlock) {
       detail = `${(node.rawConfig as any).CidrBlock}`;
     }
-    ctx.fillText(detail, textLeft, pad + 118);
+    ctx.fillText(detail, textLeft, pad + 122);
 
     // Right-hand Status Pill Badge
     const badgeW = 160;
-    const badgeH = 52;
+    const badgeH = 54;
     const badgeX = W - pad - badgeW - 16;
     const badgeY = pad + (h - badgeH) / 2;
 
@@ -1097,7 +1097,7 @@ function build3DLabelSprite(
     ctx.fill();
 
     // Status text
-    ctx.font = "bold 20px 'JetBrains Mono', monospace";
+    ctx.font = "bold 22px 'JetBrains Mono', monospace";
     ctx.fillStyle = statusColor;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -1118,10 +1118,10 @@ function build3DLabelSprite(
 
   // Humanized, high-legibility scale matching architectural schematics
   const sprite = new THREE.Sprite(spriteMat);
-  const scaleW = isCluster ? 180 : 160;
-  const scaleH = scaleW * (250 / (isCluster ? 1080 : 960));
+  const scaleW = isCluster ? 150 : 125;
+  const scaleH = scaleW * (260 / (isCluster ? 1080 : 1000));
   sprite.scale.set(scaleW, scaleH, 1);
-  sprite.position.y = 52; // Positioned cleanly above callout stem
+  sprite.position.y = 42; // Positioned cleanly above figurine
   sprite.userData = { isBillboardCard: true, nodeId: node.id };
 
   return sprite;

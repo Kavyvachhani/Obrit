@@ -26,6 +26,7 @@ import {
   Trash2,
   ShieldAlert,
   Boxes,
+  PanelLeft,
 } from "lucide-react";
 
 export const Navbar: React.FC = () => {
@@ -51,6 +52,8 @@ export const Navbar: React.FC = () => {
     toggleSecurityHeatmap,
     unplannedServices,
     setUnplannedServices,
+    isSidebarOpen,
+    toggleSidebar,
   } = useGraphStore();
 
   const {
@@ -502,6 +505,20 @@ export const Navbar: React.FC = () => {
 
       {/* ── Row 2: Floating Icon Rail ── */}
       <div className="pointer-events-auto flex items-center gap-1 self-start px-2 py-1 bg-[#151A24]/85 backdrop-blur-md border border-[#262D3A] rounded-lg shadow-xl">
+        <button
+          onClick={toggleSidebar}
+          className={`p-1.5 rounded-md transition-all text-xs cursor-pointer ${
+            isSidebarOpen
+              ? "bg-[#262D3A] text-[#4DA3FF]"
+              : "text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60"
+          }`}
+          title={isSidebarOpen ? "Close Resources Sidebar" : "Open Resources Sidebar"}
+        >
+          <PanelLeft className="w-3.5 h-3.5" />
+        </button>
+
+        <div className="w-px h-3.5 bg-[#262D3A]" />
+
         <button
           onClick={handleCameraReset}
           className="p-1.5 rounded-md text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 transition-all text-xs"

@@ -34,6 +34,7 @@ interface GraphState {
   isSecurityHeatmap: boolean;
   activeThreatScenario: string | null;
   unplannedServices: string[];
+  isSidebarOpen: boolean;
 
   setGraphData: (data: GraphData) => void;
   selectNode: (node: GraphNode | null) => void;
@@ -56,6 +57,8 @@ interface GraphState {
   setSecurityHeatmap: (active: boolean) => void;
   setActiveThreatScenario: (scenario: string | null) => void;
   setUnplannedServices: (services: string[]) => void;
+  toggleSidebar: () => void;
+  setSidebarOpen: (open: boolean) => void;
 }
 
 export const useGraphStore = create<GraphState>((set) => ({
@@ -79,6 +82,7 @@ export const useGraphStore = create<GraphState>((set) => ({
   isSecurityHeatmap: false,
   activeThreatScenario: null,
   unplannedServices: ["DynamoDB", "SQS", "CloudFront"],
+  isSidebarOpen: false,
 
   setGraphData: (data) =>
     set({
@@ -105,4 +109,6 @@ export const useGraphStore = create<GraphState>((set) => ({
   setSecurityHeatmap: (active) => set({ isSecurityHeatmap: active }),
   setActiveThreatScenario: (scenario) => set({ activeThreatScenario: scenario }),
   setUnplannedServices: (services) => set({ unplannedServices: services }),
+  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+  setSidebarOpen: (open) => set({ isSidebarOpen: open }),
 }));

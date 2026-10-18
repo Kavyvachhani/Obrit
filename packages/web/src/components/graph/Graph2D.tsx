@@ -479,7 +479,13 @@ export const Graph2D: React.FC = () => {
         }
         return 3.2;
       })
-      .linkCurvature(0.14);
+      .linkCurvature(0.14)
+      .minZoom(0.08)
+      .maxZoom(4.0)
+      .nodeLabel(() => "")
+      .linkLabel(() => "")
+      .enableZoomInteraction(true)
+      .enablePanInteraction(true);
 
     graphRef.current = fg;
 
@@ -537,7 +543,12 @@ export const Graph2D: React.FC = () => {
   const handleZoom = (factor: number) => {
     if (graphRef.current) {
       const current = graphRef.current.zoom();
-      graphRef.current.zoom(current * factor, 300);
+      const newZoom = Math.min(Math.max(current * factor, 0.08), 4.0);
+      const center = graphRef.current.centerAt();
+      graphRef.current.zoom(newZoom, 250);
+      if (center && typeof center.x === "number" && typeof center.y === "number") {
+        graphRef.current.centerAt(center.x, center.y, 250);
+      }
     }
   };
 

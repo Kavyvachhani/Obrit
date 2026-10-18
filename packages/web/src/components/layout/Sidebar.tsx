@@ -19,8 +19,15 @@ import {
 import type { GraphNode } from "@orbit/core";
 
 export const Sidebar: React.FC = () => {
-  const { nodes, selectedNode, selectNode, setFilterCategory, filterCategory } = useGraphStore();
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const {
+    nodes,
+    selectedNode,
+    selectNode,
+    setFilterCategory,
+    filterCategory,
+    isSidebarOpen,
+    setSidebarOpen,
+  } = useGraphStore();
   const [filterText, setFilterText] = useState("");
   const [activeTab, setActiveTab] = useState<"services" | "topology">("services");
   const [expandedSection, setExpandedSection] = useState<Record<string, boolean>>({
@@ -55,22 +62,12 @@ export const Sidebar: React.FC = () => {
     );
   };
 
-  if (isCollapsed) {
-    return (
-      <div className="absolute top-24 left-4 z-30">
-        <button
-          onClick={() => setIsCollapsed(false)}
-          className="p-2.5 rounded-lg bg-[#151A24]/85 backdrop-blur-md border border-[#262D3A] text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 shadow-xl transition-all cursor-pointer"
-          title="Expand Resource Panel"
-        >
-          <PanelLeft className="w-4 h-4" />
-        </button>
-      </div>
-    );
+  if (!isSidebarOpen) {
+    return null;
   }
 
   return (
-    <aside className="absolute left-4 top-24 bottom-6 w-84 max-w-[calc(100vw-2rem)] bg-[#151A24]/90 backdrop-blur-md border border-[#262D3A] rounded-xl shadow-2xl flex flex-col z-30 text-xs font-sans select-none overflow-hidden">
+    <aside className="absolute left-4 top-24 bottom-6 w-84 max-w-[calc(100vw-2rem)] bg-[#151A24]/90 backdrop-blur-md border border-[#262D3A] rounded-xl shadow-2xl flex flex-col z-30 text-xs font-sans select-none overflow-hidden animate-in fade-in slide-in-from-left-2 duration-150">
       {/* Header */}
       <div className="h-10 px-3.5 border-b border-[#27272a] flex items-center justify-between bg-[#141418]">
         <div className="flex items-center space-x-2">
@@ -83,9 +80,9 @@ export const Sidebar: React.FC = () => {
           </span>
         </div>
         <button
-          onClick={() => setIsCollapsed(true)}
-          className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200"
-          title="Collapse Panel"
+          onClick={() => setSidebarOpen(false)}
+          className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 cursor-pointer"
+          title="Close Sidebar Panel"
         >
           <PanelLeftClose className="w-3.5 h-3.5" />
         </button>

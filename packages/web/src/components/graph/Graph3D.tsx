@@ -382,14 +382,14 @@ export const Graph3D: React.FC = () => {
     diamondGrid.rotation.y = Math.PI / 4;
     diamondGrid.position.y = -79.5;
     (diamondGrid.material as THREE.Material).transparent = true;
-    (diamondGrid.material as THREE.Material).opacity = 0.65;
+    (diamondGrid.material as THREE.Material).opacity = 0.08;
     scene.add(diamondGrid);
 
     // Secondary orthogonal grid for CAD depth alignment
     const orthoGrid = new THREE.GridHelper(gridSize, gridDivs / 2, 0x1E2A3E, 0x121A28);
     orthoGrid.position.y = -80.5;
     (orthoGrid.material as THREE.Material).transparent = true;
-    (orthoGrid.material as THREE.Material).opacity = 0.45;
+    (orthoGrid.material as THREE.Material).opacity = 0.12;
     scene.add(orthoGrid);
 
     // Dynamic Floor Plates Group
@@ -398,8 +398,8 @@ export const Graph3D: React.FC = () => {
     platesGroupRef.current = platesGroup;
     scene.add(platesGroup);
 
-    // ── Initial Camera: Top-Down Architectural Blueprint Map (Crystal clear, zero tilt) ──
-    fg.cameraPosition({ x: 120, y: 1050, z: 0.1 }, { x: 120, y: -40, z: 0 }, 1000);
+    // ── Initial Camera: Clean Elevated 45° Perspective (Zero foreshortening, crystal clear) ──
+    fg.cameraPosition({ x: 180, y: 760, z: 580 }, { x: 120, y: -40, z: 0 }, 1000);
 
     // Billboard rotation on camera move
     const updateBillboards = () => {
@@ -416,9 +416,9 @@ export const Graph3D: React.FC = () => {
     try {
       const controls = (fg as any).controls();
       if (controls) {
-        // Enforce architectural isometric boundaries: strictly prevent viewing below ground or flipping upside-down!
+        // Enforce architectural boundaries: strictly prevent viewing below ground or flipping upside-down!
         controls.maxPolarAngle = Math.PI / 2.22; // ~81° - prevents camera sinking below floor plane
-        controls.minPolarAngle = Math.PI / 6;    // ~30° - prevents zenith gimbal lock
+        controls.minPolarAngle = Math.PI / 8;    // ~22.5° - prevents zenith gimbal lock while allowing top view
         controls.enableRotate = false;           // ROTATION LOCKED BY DEFAULT for stable map readability
         controls.enableDamping = true;
         controls.dampingFactor = 0.12;
@@ -769,44 +769,6 @@ export const Graph3D: React.FC = () => {
         </div>
       )}
 
-      {/* Humanized Top Architecture Diagram Header Banner */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex items-center gap-2.5 px-5 py-2 bg-[#121824]/92 backdrop-blur-md border border-[#2B374E] rounded-full shadow-2xl">
-        <div className="w-2.5 h-2.5 rounded-full bg-[#3DDC84] shadow-[0_0_8px_#3DDC84]" />
-        <span className="text-xs font-bold text-[#F1F5F9] tracking-wider uppercase">
-          3D AWS Infrastructure Topology Map
-        </span>
-        <span className="text-[11px] text-[#94A3B8] border-l border-[#2B374E] pl-2.5 font-mono">
-          Isometric Studio
-        </span>
-      </div>
-
-      {/* Humanized Architecture Legend (Cisco / AWS CAD Blueprint Style) */}
-      <div className="absolute bottom-5 left-5 z-10 hidden sm:flex flex-col gap-1.5 p-3 bg-[#121824]/94 backdrop-blur-md border border-[#263346] rounded-xl shadow-2xl text-[11px] text-[#CBD5E1]">
-        <div className="text-[10px] font-bold text-[#94A3B8] tracking-widest uppercase mb-0.5 border-b border-[#263346] pb-1">
-          Topology Legend
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#3DDC84]" />
-          <span>Healthy Resource</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#F2B33D]" />
-          <span>Exposed / Security Finding</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#FF5C5C]" />
-          <span>Critical Fault / Stopped</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full border border-dashed border-[#8893A6]" />
-          <span>Data Gap (IAM Permission)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-0.5 bg-[#38BDF8]" />
-          <span>Traffic Route Conduit</span>
-        </div>
-      </div>
-
       {/* Floating Active Threat Simulation HUD */}
       {threatSimulation && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-4 py-2 rounded-xl bg-[#1A0B0E]/95 border border-[#FF5C5C]/70 text-[#E6E9EF] shadow-2xl backdrop-blur-md animate-pulse">
@@ -864,19 +826,13 @@ export const Graph3D: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setViewMode("2d")}
-          className="px-2.5 py-1.5 text-cyan-300 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-700/50 rounded-lg transition-all text-[11px] font-semibold"
-          title="Switch to 2D Schematic View"
-        >
-          📊 Switch to 2D
-        </button>
-        <button
           onClick={() => handleCameraPreset("elevation")}
           className="px-2.5 py-1.5 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[11px] font-medium"
           title="Front Elevation View"
         >
           🏢 Elevation
         </button>
+
         <button
           onClick={() => handleCameraPreset("fit")}
           className="px-2.5 py-1.5 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[11px] font-medium"
@@ -887,32 +843,16 @@ export const Graph3D: React.FC = () => {
 
         <div className="w-px h-5 bg-[#262D3A]" />
 
-        {/* Security Heatmap Mode Toggle */}
-        <button
-          onClick={toggleSecurityHeatmap}
-          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
-            isSecurityHeatmap
-              ? "bg-[#FF5C5C]/20 border border-[#FF5C5C]/60 text-[#FF5C5C]"
-              : "text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60"
-          }`}
-          title="Toggle Security Vulnerability Heatmap Mode"
-        >
-          <span className={`w-2 h-2 rounded-full ${isSecurityHeatmap ? "bg-[#FF5C5C] animate-pulse" : "bg-[#8893A6]"}`} />
-          <span>Heatmap</span>
-        </button>
-
-        <div className="w-px h-5 bg-[#262D3A]" />
-
         <button
           onClick={() => handleZoom(0.8)}
-          className="px-2 py-1 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[12px] font-medium"
+          className="px-2.5 py-1 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[13px] font-semibold"
           title="Zoom In"
         >
           +
         </button>
         <button
           onClick={() => handleZoom(1.25)}
-          className="px-2 py-1 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[12px] font-medium"
+          className="px-2.5 py-1 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[13px] font-semibold"
           title="Zoom Out"
         >
           −
@@ -940,24 +880,24 @@ function addFloorPlate(parent: THREE.Object3D, config: FloorPlateConfig) {
   const slabHeight = 6;
   const boxGeo = new THREE.BoxGeometry(config.width, slabHeight, config.depth);
 
-  // High-contrast semi-solid architectural material (no murkiness)
+  // Sleek dark translucent graphite glass platform (eliminates muddy colored slabs)
   const mat = new THREE.MeshStandardMaterial({
-    color: config.color,
+    color: 0x0E131E,
     transparent: true,
-    opacity: Math.max(0.28, config.opacity * 4.5),
-    metalness: 0.1,
-    roughness: 0.8,
+    opacity: 0.72,
+    metalness: 0.2,
+    roughness: 0.7,
     side: THREE.DoubleSide,
   });
   const slabMesh = new THREE.Mesh(boxGeo, mat);
   slabMesh.position.set(config.position[0], config.position[1] - slabHeight / 2, config.position[2]);
   parent.add(slabMesh);
 
-  // Glowing perimeter outline around the top edge
+  // Glowing delicate perimeter outline around the top edge
   const edgeMat = new THREE.LineBasicMaterial({
     color: config.color,
     transparent: true,
-    opacity: Math.max(0.65, config.edgeOpacity),
+    opacity: 0.45,
   });
   const topPlaneGeo = new THREE.PlaneGeometry(config.width, config.depth);
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(topPlaneGeo), edgeMat);
