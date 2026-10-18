@@ -48,6 +48,8 @@ export const Graph3D: React.FC = () => {
     isGrouped,
     isSecurityHeatmap,
     activeThreatScenario,
+    isLiveTrafficActive,
+    focusedBlastRadiusNodeId,
     selectNode,
     hoverNode,
     hoverLink,
@@ -57,7 +59,6 @@ export const Graph3D: React.FC = () => {
     setViewMode,
   } = useGraphStore();
 
-  const [isRotateEnabled, setIsRotateEnabled] = React.useState(false);
   const [activePreset, setActivePreset] = React.useState<"iso" | "top" | "angle" | "fit">("iso");
 
   const { filteredNodes, filteredLinks } = React.useMemo(() => {
@@ -213,39 +214,56 @@ export const Graph3D: React.FC = () => {
           unverifiedReason: gLink.unverifiedReason,
         });
       })
-      // Traffic particle flow (optimized for zero GPU lag on dense networks & threat illumination)
+      // Traffic particle flow (live AWS packet flow + blast radius illumination)
       .linkDirectionalParticles((link) => {
         const gLink = link as unknown as GraphLink;
         if (threatSimulation?.affectedLinkIds.has(gLink.id)) {
           return 6;
         }
+        const srcId = typeof gLink.source === "object" ? (gLink.source as any).id : gLink.source;
+        const tgtId = typeof gLink.target === "object" ? (gLink.target as any).id : gLink.target;
+
+        // If blast radius inspection is focused on a specific node
+        if (focusedBlastRadiusNodeId && (srcId === focusedBlastRadiusNodeId || tgtId === focusedBlastRadiusNodeId)) {
+          return 6;
+        }
+
         const isHoveredEdge = hoveredLink && (hoveredLink.id === gLink.id || (hoveredLink.source === gLink.source && hoveredLink.target === gLink.target));
         if (hoveredLink) {
           return isHoveredEdge ? 6 : 0;
         }
         if (selectedNode) {
-          const srcId = typeof gLink.source === "object" ? (gLink.source as any).id : gLink.source;
-          const tgtId = typeof gLink.target === "object" ? (gLink.target as any).id : gLink.target;
-          return (srcId === selectedNode.id || tgtId === selectedNode.id) ? 4 : 0;
+          return (srcId === selectedNode.id || tgtId === selectedNode.id) ? 5 : (isLiveTrafficActive ? 2 : 0);
         }
-        if (trafficLinks.length > 40) return 0;
-        return 2;
+        if (!isLiveTrafficActive) return 0;
+        // Steady live traffic pulse on active routes
+        return (gLink.relationshipType === "routes-to" || gLink.relationshipType === "targets") ? 3 : 2;
       })
       .linkDirectionalParticleSpeed((link) => {
         const gLink = link as unknown as GraphLink;
         if (threatSimulation?.affectedLinkIds.has(gLink.id)) {
           return 0.022;
         }
+        const srcId = typeof gLink.source === "object" ? (gLink.source as any).id : gLink.source;
+        const tgtId = typeof gLink.target === "object" ? (gLink.target as any).id : gLink.target;
+        if (focusedBlastRadiusNodeId && (srcId === focusedBlastRadiusNodeId || tgtId === focusedBlastRadiusNodeId)) {
+          return 0.016;
+        }
         const isHoveredEdge = hoveredLink && (hoveredLink.id === gLink.id || (hoveredLink.source === gLink.source && hoveredLink.target === gLink.target));
-        return isHoveredEdge ? 0.012 : 0.005;
+        return isHoveredEdge ? 0.014 : 0.007;
       })
       .linkDirectionalParticleWidth((link) => {
         const gLink = link as unknown as GraphLink;
         if (threatSimulation?.affectedLinkIds.has(gLink.id)) {
           return 5.0;
         }
+        const srcId = typeof gLink.source === "object" ? (gLink.source as any).id : gLink.source;
+        const tgtId = typeof gLink.target === "object" ? (gLink.target as any).id : gLink.target;
+        if (focusedBlastRadiusNodeId && (srcId === focusedBlastRadiusNodeId || tgtId === focusedBlastRadiusNodeId)) {
+          return 4.5;
+        }
         const isHoveredEdge = hoveredLink && (hoveredLink.id === gLink.id || (hoveredLink.source === gLink.source && hoveredLink.target === gLink.target));
-        return isHoveredEdge ? 5.5 : 2.5;
+        return isHoveredEdge ? 5.0 : 3.0;
       })
       .linkDirectionalParticleColor((link) => {
         const gLink = link as unknown as GraphLink;
@@ -282,6 +300,12 @@ export const Graph3D: React.FC = () => {
           return "rgba(38,45,58,0.08)"; // Dim non-hovered edges
         }
 
+        if (focusedBlastRadiusNodeId) {
+          const isBlastEdge = (srcId === focusedBlastRadiusNodeId || tgtId === focusedBlastRadiusNodeId);
+          if (isBlastEdge) return "#F59E0B"; // High-visibility amber/orange for blast radius
+          return "rgba(38,45,58,0.08)"; // Dim unaffected edges during blast simulation
+        }
+
         if (isConnectedToFocus) {
           return "#38BDF8"; // Bright illuminated edge for focused node
         }
@@ -313,9 +337,14 @@ export const Graph3D: React.FC = () => {
         const isHoveredEdge = hoveredLink && (hoveredLink.id === gLink.id || (hoveredLink.source === gLink.source && hoveredLink.target === gLink.target));
         const srcId = typeof gLink.source === "object" ? (gLink.source as any).id : gLink.source;
         const tgtId = typeof gLink.target === "object" ? (gLink.target as any).id : gLink.target;
+        const isBlastEdge = Boolean(focusedBlastRadiusNodeId && (srcId === focusedBlastRadiusNodeId || tgtId === focusedBlastRadiusNodeId));
         const isConnectedToFocus =
           (selectedNode && (srcId === selectedNode.id || tgtId === selectedNode.id)) ||
           (hoveredNode && (srcId === hoveredNode.id || tgtId === hoveredNode.id));
+
+        if (isBlastEdge) {
+          return 4.6;
+        }
 
         if (isHoveredEdge || isConnectedToFocus) {
           return 4.0;
@@ -693,16 +722,7 @@ export const Graph3D: React.FC = () => {
     });
   }, [ingressBounds, vpcBounds, azBounds, subnetBounds, regionalBounds]);
 
-  // Sync rotation toggle with 3D controls
-  useEffect(() => {
-    if (!graphRef.current) return;
-    try {
-      const controls = (graphRef.current as any).controls();
-      if (controls) {
-        controls.enableRotate = isRotateEnabled;
-      }
-    } catch {}
-  }, [isRotateEnabled]);
+
 
   // Camera controls & presets
   const handleCameraPreset = (preset: "iso" | "top" | "angle" | "fit") => {
@@ -799,61 +819,33 @@ export const Graph3D: React.FC = () => {
 
       {/* Floating Viewport Controls & Camera Presets */}
       <div className="absolute bottom-5 right-5 z-10 flex items-center gap-1.5 p-1.5 bg-[#151A24]/92 backdrop-blur-md border border-[#262D3A] rounded-xl shadow-2xl">
-        {/* Rotation Lock Toggle Button */}
-        <button
-          onClick={() => setIsRotateEnabled((prev) => !prev)}
-          className={`px-2.5 py-1.5 rounded-lg transition-all text-[11px] font-semibold flex items-center gap-1.5 ${
-            isRotateEnabled
-              ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-              : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-          }`}
-          title={isRotateEnabled ? "3D Free Orbit ON — Click to lock rotation and pan only" : "Rotation Locked — Dragging pans the map without spinning"}
-        >
-          <span>{isRotateEnabled ? "🔄 Orbit: ON" : "🔒 Rotation: LOCKED"}</span>
-        </button>
-
         <button
           onClick={() => handleCameraPreset("iso")}
-          className={`px-2.5 py-1.5 rounded-lg transition-all text-[11px] font-medium flex items-center gap-1.5 ${
+          className={`px-3 py-1.5 rounded-lg transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${
             activePreset === "iso"
               ? "bg-[#262D3A] text-white border border-[#4DA3FF]/60 shadow-sm"
               : "text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60"
           }`}
-          title="3D High Isometric Angle (Recommended)"
+          title="Cloudcraft 3D Isometric View (Drag to Pan, Scroll to Zoom)"
         >
-          📐 3D Angle
+          <span>📐 3D Isometric</span>
         </button>
 
         <button
-          onClick={() => {
-            setIsRotateEnabled(false);
-            handleCameraPreset("top");
-          }}
-          className={`px-2.5 py-1.5 rounded-lg transition-all text-[11px] font-medium flex items-center gap-1.5 ${
+          onClick={() => handleCameraPreset("top")}
+          className={`px-3 py-1.5 rounded-lg transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer ${
             activePreset === "top"
               ? "bg-[#262D3A] text-white border border-[#4DA3FF]/60 shadow-sm"
               : "text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60"
           }`}
-          title="Top-Down Blueprint Plan View (Flat, Clean, Readable)"
+          title="Top-Down Blueprint Plan View"
         >
-          🗺️ Top Map
-        </button>
-
-        <button
-          onClick={() => handleCameraPreset("angle")}
-          className={`px-2.5 py-1.5 rounded-lg transition-all text-[11px] font-medium flex items-center gap-1.5 ${
-            activePreset === "angle"
-              ? "bg-[#262D3A] text-white border border-[#4DA3FF]/60 shadow-sm"
-              : "text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60"
-          }`}
-          title="3/4 Architectural Perspective"
-        >
-          🏛️ 3/4 View
+          <span>🗺️ Blueprint (2D Plan)</span>
         </button>
 
         <button
           onClick={() => handleCameraPreset("fit")}
-          className="px-2.5 py-1.5 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[11px] font-medium"
+          className="px-2.5 py-1.5 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-xs font-medium cursor-pointer"
           title="Fit All Resources in Frame"
         >
           🎯 Fit All
@@ -863,14 +855,14 @@ export const Graph3D: React.FC = () => {
 
         <button
           onClick={() => handleZoom(0.8)}
-          className="px-2.5 py-1 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[13px] font-semibold"
+          className="px-2.5 py-1 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[13px] font-semibold cursor-pointer"
           title="Zoom In"
         >
           +
         </button>
         <button
           onClick={() => handleZoom(1.25)}
-          className="px-2.5 py-1 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[13px] font-semibold"
+          className="px-2.5 py-1 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[13px] font-semibold cursor-pointer"
           title="Zoom Out"
         >
           −

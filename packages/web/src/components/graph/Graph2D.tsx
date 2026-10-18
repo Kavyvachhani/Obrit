@@ -43,6 +43,8 @@ export const Graph2D: React.FC = () => {
     filterCategory,
     searchQuery,
     isGrouped,
+    isLiveTrafficActive,
+    focusedBlastRadiusNodeId,
     selectNode,
     hoverNode,
     hoverLink,
@@ -415,28 +417,43 @@ export const Graph2D: React.FC = () => {
         const isInferred = Boolean(gLink.isInferred || srcNode?.status === "incomplete" || tgtNode?.status === "incomplete");
         return isInferred ? [6, 4] : null;
       })
-      // Traffic particle flow (optimized for zero canvas lag on dense networks)
+      // Traffic particle flow (live AWS packet flow + blast radius illumination)
       .linkDirectionalParticles((link) => {
         const gLink = link as unknown as GraphLink;
+        const srcId = typeof gLink.source === "object" ? (gLink.source as any).id : gLink.source;
+        const tgtId = typeof gLink.target === "object" ? (gLink.target as any).id : gLink.target;
+
+        if (focusedBlastRadiusNodeId && (srcId === focusedBlastRadiusNodeId || tgtId === focusedBlastRadiusNodeId)) {
+          return 6;
+        }
+
         const isHoveredEdge = hoveredLink && (hoveredLink.id === gLink.id || (hoveredLink.source === gLink.source && hoveredLink.target === gLink.target));
         if (hoveredLink) {
           return isHoveredEdge ? 6 : 0;
         }
         if (selectedNode) {
-          const srcId = typeof gLink.source === "object" ? (gLink.source as any).id : gLink.source;
-          const tgtId = typeof gLink.target === "object" ? (gLink.target as any).id : gLink.target;
-          return (srcId === selectedNode.id || tgtId === selectedNode.id) ? 4 : 0;
+          return (srcId === selectedNode.id || tgtId === selectedNode.id) ? 5 : (isLiveTrafficActive ? 2 : 0);
         }
-        if (trafficLinks.length > 40) return 0;
-        return 2;
+        if (!isLiveTrafficActive) return 0;
+        return (gLink.relationshipType === "routes-to" || gLink.relationshipType === "targets") ? 3 : 2;
       })
       .linkDirectionalParticleSpeed((link) => {
         const gLink = link as unknown as GraphLink;
+        const srcId = typeof gLink.source === "object" ? (gLink.source as any).id : gLink.source;
+        const tgtId = typeof gLink.target === "object" ? (gLink.target as any).id : gLink.target;
+        if (focusedBlastRadiusNodeId && (srcId === focusedBlastRadiusNodeId || tgtId === focusedBlastRadiusNodeId)) {
+          return 0.016;
+        }
         const isHoveredEdge = hoveredLink && (hoveredLink.id === gLink.id || (hoveredLink.source === gLink.source && hoveredLink.target === gLink.target));
         return isHoveredEdge ? 0.014 : 0.007;
       })
       .linkDirectionalParticleWidth((link) => {
         const gLink = link as unknown as GraphLink;
+        const srcId = typeof gLink.source === "object" ? (gLink.source as any).id : gLink.source;
+        const tgtId = typeof gLink.target === "object" ? (gLink.target as any).id : gLink.target;
+        if (focusedBlastRadiusNodeId && (srcId === focusedBlastRadiusNodeId || tgtId === focusedBlastRadiusNodeId)) {
+          return 5.0;
+        }
         const isHoveredEdge = hoveredLink && (hoveredLink.id === gLink.id || (hoveredLink.source === gLink.source && hoveredLink.target === gLink.target));
         return isHoveredEdge ? 5 : 3;
       })
@@ -463,6 +480,12 @@ export const Graph2D: React.FC = () => {
           return "rgba(38,45,58,0.2)"; // Dim non-hovered edges
         }
 
+        if (focusedBlastRadiusNodeId) {
+          const isBlastEdge = (srcId === focusedBlastRadiusNodeId || tgtId === focusedBlastRadiusNodeId);
+          if (isBlastEdge) return "#F59E0B";
+          return "rgba(38,45,58,0.1)"; // Dim unaffected edges
+        }
+
         if (isInferred) {
           return "#F59E0B"; // Inferred/unverified edge color (amber)
         }
@@ -473,6 +496,11 @@ export const Graph2D: React.FC = () => {
       })
       .linkWidth((link) => {
         const gLink = link as unknown as GraphLink;
+        const srcId = typeof gLink.source === "object" ? (gLink.source as any).id : gLink.source;
+        const tgtId = typeof gLink.target === "object" ? (gLink.target as any).id : gLink.target;
+        if (focusedBlastRadiusNodeId && (srcId === focusedBlastRadiusNodeId || tgtId === focusedBlastRadiusNodeId)) {
+          return 5.0;
+        }
         const isHoveredEdge = hoveredLink && (hoveredLink.id === gLink.id || (hoveredLink.source === gLink.source && hoveredLink.target === gLink.target));
         if (hoveredLink) {
           return isHoveredEdge ? 5.2 : 1.2;

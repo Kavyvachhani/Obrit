@@ -11,7 +11,7 @@ import { useGraphStore } from "./stores/graph-store.js";
 import { useAccountStore } from "./stores/account-store.js";
 import { fetchGraph } from "./lib/api.js";
 
-import { DEFAULT_AWS_TOPOLOGY } from "./lib/architecture-data.js";
+import { ENTERPRISE_AWS_TOPOLOGY } from "./lib/architecture-data.js";
 
 import { GraphErrorBoundary } from "./components/graph/GraphErrorBoundary.js";
 
@@ -27,7 +27,7 @@ export const App: React.FC = () => {
   // Load graph for active account if available
   useEffect(() => {
     if (!activeAccountId || activeAccountId === "demo") {
-      setGraphData(DEFAULT_AWS_TOPOLOGY);
+      setGraphData(ENTERPRISE_AWS_TOPOLOGY);
       return;
     }
 
@@ -39,11 +39,11 @@ export const App: React.FC = () => {
         if (!cancelled && data && data.nodes && data.nodes.length > 0) {
           setGraphData(data);
         } else if (!cancelled) {
-          setGraphData(DEFAULT_AWS_TOPOLOGY);
+          setGraphData(ENTERPRISE_AWS_TOPOLOGY);
         }
       } catch {
         if (!cancelled) {
-          setGraphData(DEFAULT_AWS_TOPOLOGY);
+          setGraphData(ENTERPRISE_AWS_TOPOLOGY);
         }
       } finally {
         if (!cancelled) setLoading(false);

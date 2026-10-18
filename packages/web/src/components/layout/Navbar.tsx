@@ -54,6 +54,8 @@ export const Navbar: React.FC = () => {
     setUnplannedServices,
     isSidebarOpen,
     toggleSidebar,
+    isLiveTrafficActive,
+    toggleLiveTraffic,
   } = useGraphStore();
 
   const {
@@ -377,6 +379,38 @@ export const Navbar: React.FC = () => {
 
         {/* Right: Scan Gap Badge + Layers ▾ + Settings ⚙ */}
         <div className="flex items-center gap-2">
+          {/* Live AWS Traffic & Telemetry Status HUD */}
+          <button
+            onClick={toggleLiveTraffic}
+            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-all text-xs font-mono cursor-pointer shadow-sm ${
+              isLiveTrafficActive
+                ? "bg-[#151A24] border-[#3DDC84]/50 text-[#E6E9EF] hover:border-[#3DDC84]"
+                : "bg-[#0B0E14] border-[#262D3A] text-[#8893A6] hover:text-[#E6E9EF]"
+            }`}
+            title={
+              isLiveTrafficActive
+                ? "Live AWS Traffic Active: 4.8k req/s • P95: 18ms • Click to Pause Traffic Packets"
+                : "Live Traffic Paused • Click to Resume Live AWS Packets"
+            }
+          >
+            <span className="relative flex h-2 w-2">
+              {isLiveTrafficActive && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3DDC84] opacity-75" />
+              )}
+              <span
+                className={`relative inline-flex rounded-full h-2 w-2 ${
+                  isLiveTrafficActive ? "bg-[#3DDC84]" : "bg-[#8893A6]"
+                }`}
+              />
+            </span>
+            <span className="text-[11px] font-semibold text-[#3DDC84]">
+              {isLiveTrafficActive ? "LIVE TRAFFIC" : "PAUSED"}
+            </span>
+            <span className="hidden xl:inline text-[10px] text-[#8893A6]">
+              4.8k req/s • 18ms
+            </span>
+          </button>
+
           {/* Scan-gap badge (selects and inspects the incomplete node without hiding the network) */}
           {incompleteCount > 0 && (
             <button

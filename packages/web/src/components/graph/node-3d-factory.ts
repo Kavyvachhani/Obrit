@@ -1117,12 +1117,12 @@ function build3DLabelSprite(
   const statusColor = getStatusColor(visualStatus);
   const isIncomplete = visualStatus === "incomplete";
 
-  const cacheKey = `sprite_v4_${node.id}_${isSelected}_${isHovered}_${visualStatus}`;
+  const cacheKey = `sprite_v5_cloudcraft_${node.id}_${isSelected}_${isHovered}_${visualStatus}`;
   let texture = textureCache.get(cacheKey);
 
   if (!texture) {
-    const W = isCluster ? 1080 : 1000;
-    const H = 260;
+    const W = isCluster ? 620 : 540;
+    const H = 130;
     const canvas = document.createElement("canvas");
     canvas.width = W;
     canvas.height = H;
@@ -1130,32 +1130,30 @@ function build3DLabelSprite(
 
     ctx.clearRect(0, 0, W, H);
 
-    const pad = 10;
+    const pad = 6;
     const w = W - pad * 2;
     const h = H - pad * 2;
 
-    // Solid high-contrast backing
-    ctx.shadowColor = "rgba(0, 0, 0, 0.95)";
-    ctx.shadowBlur = 24;
-    ctx.shadowOffsetY = 8;
+    // Sleek Cloudcraft pill backing (translucent graphite)
+    ctx.shadowColor = "rgba(0, 0, 0, 0.85)";
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 4;
 
-    // Rich dark graphite solid badge backing (crystal clear contrast against 3D scene)
-    ctx.fillStyle = isSelected ? "#1E2738" : isHovered ? "#182030" : "#101520";
+    ctx.fillStyle = isSelected ? "#1E2738" : isHovered ? "#182030" : "rgba(16, 22, 34, 0.94)";
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(pad, pad, w, h, 22);
+    if (ctx.roundRect) ctx.roundRect(pad, pad, w, h, 20);
     else ctx.rect(pad, pad, w, h);
     ctx.fill();
 
-    // Reset shadow
     ctx.shadowColor = "transparent";
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
 
-    // Crisp perimeter
-    ctx.lineWidth = isSelected ? 6.0 : isHovered ? 4.5 : 3.5;
+    // Crisp status border
+    ctx.lineWidth = isSelected ? 4.5 : isHovered ? 3.5 : 2.5;
     if (isIncomplete) {
       ctx.strokeStyle = "#8893A6";
-      ctx.setLineDash([14, 8]);
+      ctx.setLineDash([10, 6]);
       ctx.stroke();
       ctx.setLineDash([]);
     } else {
@@ -1163,16 +1161,25 @@ function build3DLabelSprite(
       ctx.stroke();
     }
 
-    // Top color accent bar
-    ctx.fillStyle = isIncomplete ? "#8893A6" : (isCluster ? "#38BDF8" : statusColor);
+    // Left service icon badge box
+    const iconBoxW = 90;
+    ctx.fillStyle = `${style.color}22`;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(pad, pad, w, 8, [22, 22, 0, 0]);
-    else ctx.rect(pad, pad, w, 8);
+    if (ctx.roundRect) ctx.roundRect(pad, pad, iconBoxW, h, [20, 0, 0, 20]);
+    else ctx.rect(pad, pad, iconBoxW, h);
     ctx.fill();
 
-    // Service Icon Badge (Large, Bold & Highly Visible)
-    const iconSize = 195;
-    const iconX = pad + 18;
+    // Divider line
+    ctx.strokeStyle = `${style.color}40`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(pad + iconBoxW, pad);
+    ctx.lineTo(pad + iconBoxW, pad + h);
+    ctx.stroke();
+
+    // Service Icon
+    const iconSize = 64;
+    const iconX = pad + (iconBoxW - iconSize) / 2;
     const iconY = pad + (h - iconSize) / 2;
     drawOfficialAwsVectorIcon(
       ctx,
@@ -1184,76 +1191,59 @@ function build3DLabelSprite(
     );
 
     // Text Content Area
-    const textLeft = iconX + iconSize + 28;
+    const textLeft = pad + iconBoxW + 16;
 
-    // Service category tag
-    ctx.font = "bold 32px 'Inter', sans-serif";
+    // Service category tag (small pill)
+    ctx.font = "bold 18px 'Inter', sans-serif";
     ctx.fillStyle = isIncomplete ? "#94A3B8" : (isCluster ? "#38BDF8" : style.color);
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     const tagText = isCluster
-      ? `FLEET CLUSTER • ${(node.rawConfig as any).totalCount} RESOURCES`
-      : isIncomplete
-      ? `${style.shortType} • DATA GAP`
+      ? `FLEET • ${(node.rawConfig as any).totalCount}`
       : `${style.shortType.toUpperCase()}`;
-    ctx.fillText(tagText, textLeft, pad + 22);
+    ctx.fillText(tagText, textLeft, pad + 16);
 
-    // Resource Name (Large, bold, high-contrast white text)
-    ctx.font = "bold 58px 'Inter', -apple-system, sans-serif";
+    // Resource Name (Clean, high-contrast white text)
+    ctx.font = "bold 32px 'Inter', -apple-system, sans-serif";
     ctx.fillStyle = "#FFFFFF";
     let displayName = node.name || node.id;
-    if (displayName.length > 22) displayName = displayName.slice(0, 21) + "…";
-    ctx.fillText(displayName, textLeft, pad + 60);
+    if (displayName.length > 20) displayName = displayName.slice(0, 19) + "…";
+    ctx.fillText(displayName, textLeft, pad + 42);
 
-    // Humanized detail subtitle
-    ctx.font = "bold 30px 'JetBrains Mono', monospace";
-    ctx.fillStyle = isIncomplete ? "#CBD5E1" : "#A0AEC0";
+    // Subtitle / IP / Detail
+    ctx.font = "600 18px 'JetBrains Mono', monospace";
+    ctx.fillStyle = isIncomplete ? "#CBD5E1" : "#94A3B8";
     let detail = node.region || "us-east-1";
     if (isCluster) {
       const raw = (node.rawConfig as any) || {};
-      detail = `${raw.healthyCount || raw.totalCount} Healthy • Click to Inspect`;
+      detail = `${raw.healthyCount || raw.totalCount} Healthy`;
     } else if (isIncomplete && node.scanError) {
       detail = `⚠️ Missing IAM: ${node.scanError.code}`;
+    } else if (node.rawConfig && (node.rawConfig as any).PrivateIpAddress) {
+      detail = `${(node.rawConfig as any).PrivateIpAddress}`;
     } else if (node.rawConfig && (node.rawConfig as any).InstanceType) {
-      detail = `${(node.rawConfig as any).InstanceType} • ${(node.rawConfig as any).PrivateIpAddress || "10.0.x.x"}`;
-    } else if (node.rawConfig && (node.rawConfig as any).Runtime) {
-      detail = `${(node.rawConfig as any).Runtime} • ${(node.rawConfig as any).MemorySize || 512}MB`;
+      detail = `${(node.rawConfig as any).InstanceType}`;
     } else if (node.rawConfig && (node.rawConfig as any).Engine) {
-      detail = `${(node.rawConfig as any).Engine} • Multi-AZ`;
-    } else if (node.rawConfig && (node.rawConfig as any).CidrBlock) {
-      detail = `${(node.rawConfig as any).CidrBlock}`;
+      detail = `${(node.rawConfig as any).Engine}`;
     }
-    ctx.fillText(detail, textLeft, pad + 124);
+    if (detail.length > 24) detail = detail.slice(0, 23) + "…";
+    ctx.fillText(detail, textLeft, pad + 82);
 
-    // Right-hand Status Pill Badge
-    const badgeW = 160;
-    const badgeH = 54;
-    const badgeX = W - pad - badgeW - 16;
-    const badgeY = pad + (h - badgeH) / 2;
+    // Right-hand Status LED Indicator Dot
+    const statusDotX = W - pad - 24;
+    const statusDotY = pad + h / 2;
 
-    ctx.fillStyle = `${statusColor}22`;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 14);
-    else ctx.rect(badgeX, badgeY, badgeW, badgeH);
+    ctx.arc(statusDotX, statusDotY, 9, 0, Math.PI * 2);
+    ctx.fillStyle = statusColor;
     ctx.fill();
 
+    // Subtle glow ring around LED
+    ctx.beginPath();
+    ctx.arc(statusDotX, statusDotY, 13, 0, Math.PI * 2);
     ctx.strokeStyle = statusColor;
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2;
     ctx.stroke();
-
-    // Status dot
-    ctx.beginPath();
-    ctx.arc(badgeX + 24, badgeY + badgeH / 2, 7, 0, Math.PI * 2);
-    ctx.fillStyle = statusColor;
-    ctx.fill();
-
-    // Status text
-    ctx.font = "bold 26px 'JetBrains Mono', monospace";
-    ctx.fillStyle = statusColor;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    const statusText = isIncomplete ? "GAP" : visualStatus.toUpperCase();
-    ctx.fillText(statusText, badgeX + badgeW / 2 + 10, badgeY + badgeH / 2);
 
     texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
@@ -1267,12 +1257,12 @@ function build3DLabelSprite(
     depthWrite: false,
   });
 
-  // Humanized, high-legibility scale perfectly calibrated to avoid 3D card collisions
+  // Cloudcraft-style sleek compact badge (does not occlude 3D figurines)
   const sprite = new THREE.Sprite(spriteMat);
-  const scaleW = isCluster ? 210 : 185;
-  const scaleH = scaleW * (260 / (isCluster ? 1080 : 1000));
+  const scaleW = isCluster ? 100 : 85;
+  const scaleH = scaleW * (130 / (isCluster ? 620 : 540));
   sprite.scale.set(scaleW, scaleH, 1);
-  sprite.position.y = 48; // Positioned cleanly above figurine
+  sprite.position.y = 36; // Floats right above 3D figurine
   sprite.userData = { isBillboardCard: true, nodeId: node.id };
 
   return sprite;
