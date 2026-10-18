@@ -24,6 +24,17 @@ export const InspectorPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"overview" | "config" | "tags">("overview");
   const [fleetSearch, setFleetSearch] = useState("");
 
+  // Close on Escape key press (always called unconditionally to satisfy React Rules of Hooks)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        selectNode(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectNode]);
+
   if (!selectedNode) return null;
 
   const isCluster = Boolean((selectedNode.rawConfig as any)?.isCluster);
@@ -70,17 +81,6 @@ export const InspectorPanel: React.FC = () => {
         );
       })
     : [];
-
-  // Close on Escape key press
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        selectNode(null);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectNode]);
 
   return (
     <aside className="absolute top-22 right-4 bottom-4 w-96 max-w-[calc(100vw-2rem)] bg-[#121620]/95 backdrop-blur-md rounded-xl border border-[#262D3A] flex flex-col z-40 shadow-2xl overflow-hidden font-sans animate-in fade-in slide-in-from-right-2 duration-150">

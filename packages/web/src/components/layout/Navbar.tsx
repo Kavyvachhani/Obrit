@@ -77,7 +77,7 @@ export const Navbar: React.FC = () => {
     return nodes.filter((n) => n.status === "incomplete").length;
   }, [nodes]);
 
-  // Close dropdowns when clicking outside
+  // Close dropdowns when clicking outside or pressing Escape
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (layersRef.current && !layersRef.current.contains(e.target as Node)) {
@@ -87,8 +87,18 @@ export const Navbar: React.FC = () => {
         setIsProfileOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsLayersOpen(false);
+        setIsProfileOpen(false);
+      }
+    };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   const handleRefresh = async () => {
