@@ -71,17 +71,28 @@ export const InspectorPanel: React.FC = () => {
       })
     : [];
 
+  // Close on Escape key press
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        selectNode(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectNode]);
+
   return (
-    <aside className="absolute top-4 right-4 bottom-4 w-96 max-w-[calc(100vw-2rem)] bg-[#101013] rounded-lg border border-[#27272a] flex flex-col z-30 shadow-xl overflow-hidden font-sans">
+    <aside className="absolute top-22 right-4 bottom-4 w-96 max-w-[calc(100vw-2rem)] bg-[#121620]/95 backdrop-blur-md rounded-xl border border-[#262D3A] flex flex-col z-40 shadow-2xl overflow-hidden font-sans animate-in fade-in slide-in-from-right-2 duration-150">
       {/* Panel Header */}
-      <div className="p-4 border-b border-[#27272a] flex items-start justify-between bg-[#141418]">
-        <div className="flex items-start space-x-3 pr-2 overflow-hidden">
-          <div className="p-2 rounded-md bg-[#1e1e24] border border-[#2e2e38] shrink-0 mt-0.5">
+      <div className="p-3.5 border-b border-[#262D3A] flex items-center justify-between bg-[#151A24]">
+        <div className="flex items-center space-x-2.5 pr-2 overflow-hidden min-w-0">
+          <div className="p-2 rounded-lg bg-[#0B0E14] border border-[#262D3A] shrink-0">
             {getTypeIcon()}
           </div>
-          <div className="overflow-hidden">
+          <div className="overflow-hidden min-w-0">
             <span
-              className="text-[10px] px-2 py-0.5 rounded font-mono font-medium inline-block mb-1 border"
+              className="text-[9.5px] px-2 py-0.5 rounded font-mono font-semibold inline-block mb-0.5 border"
               style={{
                 backgroundColor: `${typeColor}15`,
                 borderColor: `${typeColor}40`,
@@ -90,17 +101,18 @@ export const InspectorPanel: React.FC = () => {
             >
               {typeLabel}
             </span>
-            <h3 className="text-sm font-semibold text-zinc-100 truncate" title={selectedNode.name}>
+            <h3 className="text-xs font-bold text-[#E6E9EF] truncate" title={selectedNode.name}>
               {selectedNode.name}
             </h3>
           </div>
         </div>
         <button
           onClick={() => selectNode(null)}
-          className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
-          title="Close Inspector"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#8893A6] hover:text-[#E6E9EF] bg-[#0B0E14] hover:bg-[#262D3A] border border-[#262D3A] transition-colors cursor-pointer shrink-0 shadow-sm"
+          title="Close details panel (or press Esc)"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3.5 h-3.5" />
+          <span>Close</span>
         </button>
       </div>
 

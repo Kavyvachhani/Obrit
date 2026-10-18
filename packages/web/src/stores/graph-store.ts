@@ -68,7 +68,7 @@ export const useGraphStore = create<GraphState>((set) => ({
   hoveredNode: null,
   hoveredLink: null,
   edgeTooltip: null,
-  viewMode: "3d",
+  viewMode: "2d",
   quality: "high",
   filterCategory: "all",
   searchQuery: "",

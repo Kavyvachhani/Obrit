@@ -82,8 +82,8 @@ export const Graph2D: React.FC = () => {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const CARD_W = 180;
-    const CARD_H = 62;
+    const CARD_W = 210;
+    const CARD_H = 70;
 
     const fg = new ForceGraph2D(containerRef.current)
       .backgroundColor("#0B0E14")
@@ -252,35 +252,35 @@ export const Graph2D: React.FC = () => {
         else ctx.rect(rx, ry, 5, h);
         ctx.fill();
 
-        // ── AWS Service Icon Badge ──
-        const iconSize = 40;
-        const iconX = rx + 10;
+        // ── AWS Service Icon Badge (Large & Crisp) ──
+        const iconSize = 48;
+        const iconX = rx + 12;
         const iconY = ry + (h - iconSize) / 2;
         drawOfficialAwsVectorIcon(ctx, style.iconType, isIncomplete ? "#475569" : style.badgeBg, iconX, iconY, iconSize);
 
         // ── Text Content ──
-        const textX = iconX + iconSize + 10;
+        const textX = iconX + iconSize + 11;
         const isCluster = Boolean((gNode.rawConfig as any)?.isCluster);
 
         // Service type tag
-        ctx.font = "bold 8.5px 'Inter', sans-serif";
+        ctx.font = "bold 9.5px 'Inter', sans-serif";
         ctx.fillStyle = isIncomplete ? "#8893A6" : (isCluster ? "#38BDF8" : style.color);
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
         const tagText = isCluster
           ? `FLEET • ${(gNode.rawConfig as any).totalCount}`
           : isIncomplete ? `${style.shortType} • INCOMPLETE` : style.shortType;
-        ctx.fillText(tagText, textX, ry + 9);
+        ctx.fillText(tagText, textX, ry + 11);
 
-        // Resource name (bold)
-        ctx.font = "600 11.5px 'Inter', sans-serif";
+        // Resource name (bold & high-visibility)
+        ctx.font = "600 13px 'Inter', sans-serif";
         ctx.fillStyle = "#ffffff";
         let title = gNode.name || gNode.id;
         if (title.length > 20) title = title.slice(0, 19) + "…";
-        ctx.fillText(title, textX, ry + 22);
+        ctx.fillText(title, textX, ry + 25);
 
         // Config detail
-        ctx.font = "500 8.5px 'JetBrains Mono', monospace";
+        ctx.font = "500 9.5px 'JetBrains Mono', monospace";
         ctx.fillStyle = isIncomplete ? "#cbd5e1" : "#8892a0";
         let detail = gNode.region || "us-east-1";
         if (isCluster) {
@@ -300,7 +300,7 @@ export const Graph2D: React.FC = () => {
           detail = gNode.subGroup.slice(0, 16);
         }
         if (detail.length > 22) detail = detail.slice(0, 21) + "…";
-        ctx.fillText(detail, textX, ry + 38);
+        ctx.fillText(detail, textX, ry + 44);
 
         // ── Health Status Indicator (top right) ──
         if (isIncomplete) {
@@ -336,7 +336,7 @@ export const Graph2D: React.FC = () => {
           ctx.lineWidth = 1.2;
           ctx.stroke();
 
-          ctx.font = "bold 7px 'JetBrains Mono', monospace";
+          ctx.font = "bold 7.5px 'JetBrains Mono', monospace";
           ctx.fillStyle = statusColor;
           ctx.textAlign = "right";
           ctx.textBaseline = "middle";
