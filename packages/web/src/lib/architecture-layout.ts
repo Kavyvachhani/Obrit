@@ -48,41 +48,42 @@ export function applyStructuredArchitectureLayout(
   // Deterministic positions for official AWS reference architecture
   const nodeMap: Record<string, { x: number; y: number; z: number; tier: number; az?: any }> = {
     // ── Edge & Ingress Platform ──
-    "cf-prod-global-edge-cdn": { x: -840, y: -110, z: -110, tier: 0, az: "ingress" },
-    "apigw-prod-public-rest-api": { x: -840, y: 110, z: 110, tier: 0, az: "ingress" },
-    "igw-0998877665544332": { x: -580, y: -110, z: -110, tier: 0, az: "ingress" },
-    "sg-edge-alb": { x: -580, y: 110, z: 110, tier: 0, az: "ingress" },
+    "cf-prod-global-edge-cdn": { x: -840, y: -150, z: -160, tier: 0, az: "ingress" },
+    "apigw-prod-public-rest-api": { x: -840, y: 150, z: 160, tier: 0, az: "ingress" },
+    "igw-0998877665544332": { x: -580, y: -150, z: -160, tier: 0, az: "ingress" },
+    "sg-edge-alb": { x: -580, y: 150, z: 160, tier: 0, az: "ingress" },
 
     // ── DMZ & Cross-AZ Ingress Corridor ──
-    "nat-05544332211009988": { x: -280, y: -150, z: -150, tier: 1, az: "us-east-1a" },
-    "alb-production-edge": { x: -280, y: 150, z: 150, tier: 1, az: "vpc" },
-    "sg-internal-app": { x: -40, y: -150, z: -150, tier: 2, az: "vpc" },
-    "tg-production-api": { x: -40, y: 150, z: 150, tier: 1, az: "vpc" },
+    "nat-05544332211009988": { x: -260, y: -150, z: -160, tier: 1, az: "us-east-1a" },
+    "alb-production-edge": { x: -260, y: 150, z: 160, tier: 1, az: "vpc" },
 
-    // ── Private App Tier (Staggered 2-Column Grid for Zero Overlap) ──
-    "i-091a2b3c4d5e6f701": { x: 190, y: -160, z: -160, tier: 2, az: "us-east-1a" },
-    "i-091a2b3c4d5e6f703": { x: 430, y: -160, z: -160, tier: 2, az: "us-east-1a" },
-    "func-prod-auth-token-validator": { x: 310, y: -60, z: -60, tier: 2, az: "us-east-1a" },
-    "i-091a2b3c4d5e6f702": { x: 190, y: 130, z: 130, tier: 2, az: "us-east-1b" },
-    "ecs-prod-order-processor": { x: 430, y: 130, z: 130, tier: 2, az: "us-east-1b" },
-    "i-0demo1d1accessdenied": { x: 310, y: 230, z: 230, tier: 2, az: "us-east-1b" },
+    // ── Private App Tier (Clean parallel lanes, perfectly centered in subnets) ──
+    "sg-internal-app": { x: -10, y: -150, z: -160, tier: 2, az: "us-east-1a" },
+    "i-091a2b3c4d5e6f701": { x: 235, y: -150, z: -160, tier: 2, az: "us-east-1a" },
+    "func-prod-auth-token-validator": { x: 470, y: -150, z: -160, tier: 2, az: "us-east-1a" },
+    "i-091a2b3c4d5e6f703": { x: 235, y: -50, z: -50, tier: 2, az: "us-east-1a" },
+
+    "tg-production-api": { x: -10, y: 150, z: 160, tier: 1, az: "us-east-1b" },
+    "i-091a2b3c4d5e6f702": { x: 235, y: 150, z: 160, tier: 2, az: "us-east-1b" },
+    "i-0demo1d1accessdenied": { x: 470, y: 150, z: 160, tier: 2, az: "us-east-1b" },
+    "ecs-prod-order-processor": { x: 235, y: 50, z: 50, tier: 2, az: "us-east-1b" },
 
     // ── Database Tier (Isolated in DB Subnets) ──
-    "db-prod-aurora-pg-primary": { x: 670, y: -160, z: -160, tier: 3, az: "us-east-1a" },
-    "db-prod-aurora-pg-replica-1b": { x: 670, y: 150, z: 150, tier: 3, az: "us-east-1b" },
+    "db-prod-aurora-pg-primary": { x: 725, y: -150, z: -160, tier: 3, az: "us-east-1a" },
+    "db-prod-aurora-pg-replica-1b": { x: 725, y: 150, z: 160, tier: 3, az: "us-east-1b" },
 
     // ── Distributed Storage & Messaging Platform (DynamoDB & SQS) ──
-    "dynamodb-prod-user-sessions": { x: 970, y: -180, z: -180, tier: 4, az: "regional" },
-    "dynamodb-prod-orders-lake": { x: 970, y: -60, z: -60, tier: 4, az: "regional" },
-    "sqs-prod-event-bus-fifo": { x: 970, y: 60, z: 60, tier: 4, az: "regional" },
-    "sqs-prod-order-events-dlq": { x: 970, y: 180, z: 180, tier: 4, az: "regional" },
+    "dynamodb-prod-user-sessions": { x: 1055, y: -180, z: -180, tier: 4, az: "regional" },
+    "dynamodb-prod-orders-lake": { x: 1055, y: -60, z: -60, tier: 4, az: "regional" },
+    "sqs-prod-event-bus-fifo": { x: 1055, y: 60, z: 60, tier: 4, az: "regional" },
+    "sqs-prod-order-events-dlq": { x: 1055, y: 180, z: 180, tier: 4, az: "regional" },
 
     // ── Regional & Storage Fabric (S3, Lambda, IAM, SNS) ──
-    "sns-prod-security-alerts": { x: 1280, y: -200, z: -200, tier: 4, az: "regional" },
-    "s3-prod-static-distribution-cdn": { x: 1280, y: -80, z: -80, tier: 4, az: "regional" },
-    "s3-prod-telemetry-data-lake": { x: 1280, y: 40, z: 40, tier: 4, az: "regional" },
-    "func-prod-event-pipeline-consumer": { x: 1280, y: 160, z: 160, tier: 4, az: "regional" },
-    "role-ec2-ssm-s3-access": { x: 1280, y: 280, z: 280, tier: 4, az: "regional" },
+    "sns-prod-security-alerts": { x: 1355, y: -200, z: -200, tier: 4, az: "regional" },
+    "s3-prod-static-distribution-cdn": { x: 1355, y: -90, z: -90, tier: 4, az: "regional" },
+    "s3-prod-telemetry-data-lake": { x: 1355, y: 20, z: 20, tier: 4, az: "regional" },
+    "func-prod-event-pipeline-consumer": { x: 1355, y: 130, z: 130, tier: 4, az: "regional" },
+    "role-ec2-ssm-s3-access": { x: 1355, y: 240, z: 240, tier: 4, az: "regional" },
   };
 
   const positionedNodes: PositionedNode[] = [];
@@ -94,16 +95,20 @@ export function applyStructuredArchitectureLayout(
 
   // Check if we are running in demo mode (preset IDs present)
   const isDemo = resourceNodes.some((n) => nodeMap[n.id]);
-  const isEnterprise = resourceNodes.length > 15;
+  const isEnterprise = resourceNodes.length > 16;
 
   if (isDemo && resourceNodes.length <= 26) {
     // ── Clean Textbook Demo Architecture Layout ──
     for (const node of resourceNodes) {
       const preset = nodeMap[node.id];
       if (preset) {
-        const finalX = preset.x;
+        let finalX = preset.x;
+        // In default single-column mode, center regional nodes inside Account-level Services box
+        if (!isEnterprise && preset.az === "regional") {
+          finalX = 1070;
+        }
         const finalY = is3D ? -35 : preset.y;
-        const finalZ = is3D ? preset.z : 0;
+        const finalZ = is3D ? (preset.az === "regional" && !isEnterprise ? (preset.y * 0.8) : preset.z) : 0;
         positionedNodes.push({
           ...node,
           x: finalX,
@@ -140,7 +145,7 @@ export function applyStructuredArchitectureLayout(
           cidr: "10.0.0.0/16",
           x1: -390,
           y1: -310,
-          x2: 780,
+          x2: 860,
           y2: 310,
           z: 0,
         },
@@ -153,7 +158,7 @@ export function applyStructuredArchitectureLayout(
           azLabel: "us-east-1a",
           x1: -375,
           y1: -290,
-          x2: 765,
+          x2: 845,
           y2: -15,
           z: -160,
         },
@@ -164,7 +169,7 @@ export function applyStructuredArchitectureLayout(
           azLabel: "us-east-1b",
           x1: -375,
           y1: 15,
-          x2: 765,
+          x2: 845,
           y2: 290,
           z: 160,
         },
@@ -190,7 +195,7 @@ export function applyStructuredArchitectureLayout(
           azLabel: "us-east-1a",
           x1: -110,
           y1: -270,
-          x2: 540,
+          x2: 580,
           y2: -35,
           z: -160,
         },
@@ -200,9 +205,9 @@ export function applyStructuredArchitectureLayout(
           type: "subnet",
           isPublic: false,
           azLabel: "us-east-1a",
-          x1: 580,
+          x1: 620,
           y1: -270,
-          x2: 750,
+          x2: 830,
           y2: -35,
           z: -160,
         },
@@ -226,7 +231,7 @@ export function applyStructuredArchitectureLayout(
           azLabel: "us-east-1b",
           x1: -110,
           y1: 35,
-          x2: 540,
+          x2: 580,
           y2: 270,
           z: 160,
         },
@@ -236,9 +241,9 @@ export function applyStructuredArchitectureLayout(
           type: "subnet",
           isPublic: false,
           azLabel: "us-east-1b",
-          x1: 580,
+          x1: 620,
           y1: 35,
-          x2: 750,
+          x2: 830,
           y2: 270,
           z: 160,
         },
@@ -249,9 +254,9 @@ export function applyStructuredArchitectureLayout(
               id: "regional-messaging",
               name: "Amazon SQS & DynamoDB Event Fabric",
               type: "regional",
-              x1: 850,
+              x1: 930,
               y1: -290,
-              x2: 1090,
+              x2: 1180,
               y2: 290,
               z: 0,
             },
@@ -259,9 +264,9 @@ export function applyStructuredArchitectureLayout(
               id: "regional-services",
               name: "Global Storage & Security Fabric (S3, SNS, IAM)",
               type: "regional",
-              x1: 1160,
+              x1: 1230,
               y1: -290,
-              x2: 1400,
+              x2: 1480,
               y2: 350,
               z: 0,
             },
@@ -271,9 +276,9 @@ export function applyStructuredArchitectureLayout(
               id: "regional-services",
               name: "Account-level / Global Services",
               type: "regional",
-              x1: 850,
+              x1: 930,
               y1: -290,
-              x2: 1100,
+              x2: 1210,
               y2: 290,
               z: 0,
             },
@@ -955,12 +960,19 @@ export function getOptimizedLinks(
       return false;
     }
 
-    // If an IAM role has > 50 incoming links, only render when focused
-    if (rawLinks.length > 80 && (rel === "uses-role" || rel === "assumes-role")) {
+    // IAM Role associations & Security Group membership:
+    // Only illuminate when the IAM role, Security Group, or attached compute resource is focused (selected or hovered).
+    // This keeps the architecture diagram clean and eliminates diagonal cross-diagram spaghetti lines!
+    const isIamOrSgAssociation =
+      rel === "uses-role" ||
+      rel === "assumes-role" ||
+      (rel === "member-of" && (srcId.includes("role") || tgtId.includes("role") || srcId.includes("sg-") || tgtId.includes("sg-")));
+
+    if (isIamOrSgAssociation) {
       if (activeFocusId && (srcId === activeFocusId || tgtId === activeFocusId)) {
         return true;
       }
-      return false; // Suppress fan
+      return false; // Suppress background clutter unless actively inspected
     }
 
     return true;

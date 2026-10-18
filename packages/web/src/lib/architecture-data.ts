@@ -407,6 +407,29 @@ export const DEFAULT_AWS_TOPOLOGY: GraphData = {
       group: "vpc-0a8b9c1d2e3f4001",
       subGroup: "subnet-05db1a",
     },
+    {
+      id: "db-prod-aurora-pg-replica-1b",
+      provider: "aws",
+      accountId: "123456789012",
+      region: "us-east-1",
+      type: "rds:db-instance",
+      arn: "arn:aws:rds:us-east-1:123456789012:db:prod-aurora-pg-replica-1b",
+      name: "aurora-pg-cluster-replica (AZ-1b)",
+      tags: { Engine: "aurora-postgresql", Role: "ReadReplica", MultiAZ: "true" },
+      rawConfig: {
+        DBInstanceIdentifier: "prod-aurora-pg-replica-1b",
+        Engine: "aurora-postgresql",
+        DBInstanceClass: "db.r6g.4xlarge",
+        Status: "available",
+        VpcId: "vpc-0a8b9c1d2e3f4001",
+        SubnetId: "subnet-06db1b",
+        MultiAZ: true,
+      },
+      status: "healthy",
+      lastSeenAt: new Date().toISOString(),
+      group: "vpc-0a8b9c1d2e3f4001",
+      subGroup: "subnet-06db1b",
+    },
 
     // ─── STORAGE (S3 SECURE BUCKETS) ───────────────────────────────────────
     {
@@ -535,9 +558,10 @@ export const DEFAULT_AWS_TOPOLOGY: GraphData = {
     { id: "l-tg-ec2-1b", sourceResourceId: "tg-production-api", targetResourceId: "i-091a2b3c4d5e6f702", relationshipType: "targets", source: "tg-production-api", target: "i-091a2b3c4d5e6f702" },
     { id: "l-tg-lambda", sourceResourceId: "tg-production-api", targetResourceId: "func-prod-auth-token-validator", relationshipType: "targets", source: "tg-production-api", target: "func-prod-auth-token-validator" },
 
-    // EC2 queries RDS Aurora DB
+    // EC2 queries RDS Aurora DB (Local AZ read/write, Multi-AZ synchronous replication)
     { id: "l-ec2-rds-1a", sourceResourceId: "i-091a2b3c4d5e6f701", targetResourceId: "db-prod-aurora-pg-primary", relationshipType: "routes-to", source: "i-091a2b3c4d5e6f701", target: "db-prod-aurora-pg-primary" },
-    { id: "l-ec2-rds-1b", sourceResourceId: "i-091a2b3c4d5e6f702", targetResourceId: "db-prod-aurora-pg-primary", relationshipType: "routes-to", source: "i-091a2b3c4d5e6f702", target: "db-prod-aurora-pg-primary" },
+    { id: "l-ec2-rds-1b", sourceResourceId: "i-091a2b3c4d5e6f702", targetResourceId: "db-prod-aurora-pg-replica-1b", relationshipType: "routes-to", source: "i-091a2b3c4d5e6f702", target: "db-prod-aurora-pg-replica-1b" },
+    { id: "l-aurora-sync-rep", sourceResourceId: "db-prod-aurora-pg-primary", targetResourceId: "db-prod-aurora-pg-replica-1b", relationshipType: "routes-to", source: "db-prod-aurora-pg-primary", target: "db-prod-aurora-pg-replica-1b" },
 
     // Security & IAM Associations
     { id: "l-ec2-sg", sourceResourceId: "i-091a2b3c4d5e6f701", targetResourceId: "sg-internal-app", relationshipType: "member-of", source: "i-091a2b3c4d5e6f701", target: "sg-internal-app" },

@@ -479,7 +479,15 @@ export const Graph2D: React.FC = () => {
         }
         return 3.2;
       })
-      .linkCurvature(0.14)
+      .linkCurvature(0.01)
+      .linkDirectionalArrowLength(7.5)
+      .linkDirectionalArrowRelPos(0.85)
+      .linkDirectionalArrowColor((link) => {
+        const gLink = link as unknown as GraphLink;
+        if (gLink.isInferred) return "#F59E0B";
+        if (gLink.relationshipType === "targets") return "#C084FC";
+        return "#38BDF8";
+      })
       .minZoom(0.08)
       .maxZoom(4.0)
       .nodeLabel(() => "")

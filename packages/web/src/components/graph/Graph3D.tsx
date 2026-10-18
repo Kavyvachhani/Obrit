@@ -58,6 +58,7 @@ export const Graph3D: React.FC = () => {
   } = useGraphStore();
 
   const [isRotateEnabled, setIsRotateEnabled] = React.useState(false);
+  const [activePreset, setActivePreset] = React.useState<"iso" | "top" | "angle" | "fit">("iso");
 
   const { filteredNodes, filteredLinks } = React.useMemo(() => {
     return filterGraphData(nodes, links, filterCategory, searchQuery);
@@ -398,8 +399,8 @@ export const Graph3D: React.FC = () => {
     platesGroupRef.current = platesGroup;
     scene.add(platesGroup);
 
-    // ── Initial Camera: Architectural Perspective (Comfortable distance, bold cards readable immediately) ──
-    fg.cameraPosition({ x: 180, y: 780, z: 220 }, { x: 180, y: -40, z: 0 }, 1000);
+    // ── Initial Camera: Clean Isometric Perspective (62° elevation, zero card overlap, full schematic legibility) ──
+    fg.cameraPosition({ x: 220, y: 780, z: 420 }, { x: 220, y: -40, z: 0 }, 1000);
 
     // Billboard rotation on camera move
     const updateBillboards = () => {
@@ -416,8 +417,8 @@ export const Graph3D: React.FC = () => {
     try {
       const controls = (fg as any).controls();
       if (controls) {
-        // Enforce architectural boundaries: strictly prevent viewing below ground or flipping upside-down!
-        controls.maxPolarAngle = Math.PI / 2.22; // ~81° - prevents camera sinking below floor plane
+        // Enforce architectural boundaries: prevent camera sinking to horizontal eye-level which causes card occlusion
+        controls.maxPolarAngle = Math.PI / 2.7; // ~66° - guarantees clear overhead bird's-eye readability
         controls.minPolarAngle = 0;             // Allow complete clean top-down plan view
         controls.enableRotate = false;           // ROTATION LOCKED BY DEFAULT for stable map readability
         controls.enableDamping = true;
@@ -629,7 +630,7 @@ export const Graph3D: React.FC = () => {
         color: 0x818CF8,
         opacity: 0.12,
         edgeOpacity: 0.85,
-        position: [(b.x1 + b.x2) / 2, -43, (b.y1 + b.y2) / 2],
+        position: [(b.x1 + b.x2) / 2, -50, (b.y1 + b.y2) / 2],
         label: b.name,
       });
     });
@@ -642,7 +643,7 @@ export const Graph3D: React.FC = () => {
         color: 0x38BDF8,
         opacity: 0.08,
         edgeOpacity: 0.75,
-        position: [(b.x1 + b.x2) / 2, -46, (b.y1 + b.y2) / 2],
+        position: [(b.x1 + b.x2) / 2, -56, (b.y1 + b.y2) / 2],
         label: b.name,
       });
     });
@@ -656,7 +657,7 @@ export const Graph3D: React.FC = () => {
         color: isAZb ? 0xFBBF24 : 0x34D399,
         opacity: 0.10,
         edgeOpacity: 0.85,
-        position: [(b.x1 + b.x2) / 2, -44, (b.y1 + b.y2) / 2],
+        position: [(b.x1 + b.x2) / 2, -50, (b.y1 + b.y2) / 2],
         label: b.name,
       });
     });
@@ -671,7 +672,7 @@ export const Graph3D: React.FC = () => {
         color: col,
         opacity: 0.12,
         edgeOpacity: 0.75,
-        position: [(b.x1 + b.x2) / 2, -42, (b.y1 + b.y2) / 2],
+        position: [(b.x1 + b.x2) / 2, -44, (b.y1 + b.y2) / 2],
         label: b.name,
       });
     });
@@ -686,7 +687,7 @@ export const Graph3D: React.FC = () => {
         color: col,
         opacity: 0.12,
         edgeOpacity: 0.85,
-        position: [(b.x1 + b.x2) / 2, -43, (b.y1 + b.y2) / 2],
+        position: [(b.x1 + b.x2) / 2, -50, (b.y1 + b.y2) / 2],
         label: b.name,
       });
     });
@@ -704,40 +705,41 @@ export const Graph3D: React.FC = () => {
   }, [isRotateEnabled]);
 
   // Camera controls & presets
-  const handleCameraPreset = (preset: "iso" | "top" | "elevation" | "fit") => {
+  const handleCameraPreset = (preset: "iso" | "top" | "angle" | "fit") => {
+    setActivePreset(preset);
     if (!graphRef.current) return;
     const isBig = positionedNodes.length > 25;
-    const centerX = isBig ? 450 : 120;
+    const centerX = isBig ? 450 : 250;
     const centerY = -40;
     const centerZ = 0;
 
     switch (preset) {
       case "iso":
-        // Clean high-elevation isometric perspective (minimal perspective distortion)
+        // High-elevation isometric perspective (63° angle, zero card occlusion, full schematic visibility)
         graphRef.current.cameraPosition(
-          { x: centerX + (isBig ? 60 : 30), y: isBig ? 860 : 750, z: isBig ? 240 : 200 },
+          { x: centerX, y: isBig ? 950 : 800, z: isBig ? 480 : 400 },
           { x: centerX, y: centerY, z: centerZ },
           800
         );
         break;
       case "top":
-        // 90-degree blueprint plan view (flat, ultra-clear)
+        // 90-degree blueprint plan view (flat overhead CAD map)
         graphRef.current.cameraPosition(
-          { x: centerX, y: isBig ? 960 : 820, z: 0.1 },
+          { x: centerX, y: isBig ? 1150 : 960, z: 0.1 },
           { x: centerX, y: centerY, z: centerZ },
           800
         );
         break;
-      case "elevation":
-        // Front elevation architectural slice
+      case "angle":
+        // 3/4 architectural perspective angle
         graphRef.current.cameraPosition(
-          { x: centerX, y: 30, z: isBig ? 900 : 720 },
+          { x: centerX - 260, y: isBig ? 880 : 740, z: isBig ? 540 : 450 },
           { x: centerX, y: centerY, z: centerZ },
-          1000
+          900
         );
         break;
       case "fit":
-        graphRef.current.zoomToFit(1000, 70);
+        graphRef.current.zoomToFit(800, 70);
         break;
     }
   };
@@ -805,9 +807,21 @@ export const Graph3D: React.FC = () => {
               ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
               : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
           }`}
-          title={isRotateEnabled ? "3D Rotation is ON — Click to lock rotation and pan only" : "Rotation Locked — Dragging pans the map without spinning"}
+          title={isRotateEnabled ? "3D Free Orbit ON — Click to lock rotation and pan only" : "Rotation Locked — Dragging pans the map without spinning"}
         >
-          <span>{isRotateEnabled ? "🔄 3D Tilt: ON" : "🔒 Rotation: LOCKED"}</span>
+          <span>{isRotateEnabled ? "🔄 Orbit: ON" : "🔒 Rotation: LOCKED"}</span>
+        </button>
+
+        <button
+          onClick={() => handleCameraPreset("iso")}
+          className={`px-2.5 py-1.5 rounded-lg transition-all text-[11px] font-medium flex items-center gap-1.5 ${
+            activePreset === "iso"
+              ? "bg-[#262D3A] text-white border border-[#4DA3FF]/60 shadow-sm"
+              : "text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60"
+          }`}
+          title="3D High Isometric Angle (Recommended)"
+        >
+          📐 3D Angle
         </button>
 
         <button
@@ -815,26 +829,26 @@ export const Graph3D: React.FC = () => {
             setIsRotateEnabled(false);
             handleCameraPreset("top");
           }}
-          className="px-2.5 py-1.5 text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-lg transition-all text-[11px] font-medium"
+          className={`px-2.5 py-1.5 rounded-lg transition-all text-[11px] font-medium flex items-center gap-1.5 ${
+            activePreset === "top"
+              ? "bg-[#262D3A] text-white border border-[#4DA3FF]/60 shadow-sm"
+              : "text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60"
+          }`}
           title="Top-Down Blueprint Plan View (Flat, Clean, Readable)"
         >
           🗺️ Top Map
         </button>
 
         <button
-          onClick={() => handleCameraPreset("iso")}
-          className="px-2.5 py-1.5 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[11px] font-medium"
-          title="3D Isometric Angle"
+          onClick={() => handleCameraPreset("angle")}
+          className={`px-2.5 py-1.5 rounded-lg transition-all text-[11px] font-medium flex items-center gap-1.5 ${
+            activePreset === "angle"
+              ? "bg-[#262D3A] text-white border border-[#4DA3FF]/60 shadow-sm"
+              : "text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60"
+          }`}
+          title="3/4 Architectural Perspective"
         >
-          📐 3D Angle
-        </button>
-
-        <button
-          onClick={() => handleCameraPreset("elevation")}
-          className="px-2.5 py-1.5 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-lg transition-all text-[11px] font-medium"
-          title="Front Elevation View"
-        >
-          🏢 Elevation
+          🏛️ 3/4 View
         </button>
 
         <button
