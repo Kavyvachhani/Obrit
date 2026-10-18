@@ -33,6 +33,7 @@ interface GraphState {
   isFaultsOpen: boolean;
   isSecurityHeatmap: boolean;
   activeThreatScenario: string | null;
+  unplannedServices: string[];
 
   setGraphData: (data: GraphData) => void;
   selectNode: (node: GraphNode | null) => void;
@@ -54,6 +55,7 @@ interface GraphState {
   toggleSecurityHeatmap: () => void;
   setSecurityHeatmap: (active: boolean) => void;
   setActiveThreatScenario: (scenario: string | null) => void;
+  setUnplannedServices: (services: string[]) => void;
 }
 
 export const useGraphStore = create<GraphState>((set) => ({
@@ -76,6 +78,7 @@ export const useGraphStore = create<GraphState>((set) => ({
   isFaultsOpen: false,
   isSecurityHeatmap: false,
   activeThreatScenario: null,
+  unplannedServices: ["DynamoDB", "SQS", "CloudFront"],
 
   setGraphData: (data) =>
     set({
@@ -101,4 +104,5 @@ export const useGraphStore = create<GraphState>((set) => ({
   toggleSecurityHeatmap: () => set((state) => ({ isSecurityHeatmap: !state.isSecurityHeatmap })),
   setSecurityHeatmap: (active) => set({ isSecurityHeatmap: active }),
   setActiveThreatScenario: (scenario) => set({ activeThreatScenario: scenario }),
+  setUnplannedServices: (services) => set({ unplannedServices: services }),
 }));

@@ -50,6 +50,7 @@ export async function scanRoutes(app: FastifyInstance): Promise<void> {
       resource_count: number;
       status: string;
       errors: string;
+      unplanned_services?: string;
     }>("SELECT * FROM scan_runs WHERE id = $1", [id]);
 
     const row = result.rows[0];
@@ -66,6 +67,10 @@ export async function scanRoutes(app: FastifyInstance): Promise<void> {
       resourceCount: row.resource_count,
       status: row.status as ScanRun["status"],
       errors: typeof row.errors === "string" ? JSON.parse(row.errors) : row.errors,
+      unplannedServices:
+        typeof row.unplanned_services === "string"
+          ? JSON.parse(row.unplanned_services)
+          : row.unplanned_services || [],
     };
 
     return reply.send(scanRun);
@@ -86,6 +91,7 @@ export async function scanRoutes(app: FastifyInstance): Promise<void> {
       resource_count: number;
       status: string;
       errors: string;
+      unplanned_services?: string;
     }>(
       "SELECT * FROM scan_runs WHERE account_id = $1 ORDER BY started_at DESC LIMIT 1",
       [accountId]
@@ -105,6 +111,10 @@ export async function scanRoutes(app: FastifyInstance): Promise<void> {
       resourceCount: row.resource_count,
       status: row.status as ScanRun["status"],
       errors: typeof row.errors === "string" ? JSON.parse(row.errors) : row.errors,
+      unplannedServices:
+        typeof row.unplanned_services === "string"
+          ? JSON.parse(row.unplanned_services)
+          : row.unplanned_services || [],
     };
 
     return reply.send(scanRun);

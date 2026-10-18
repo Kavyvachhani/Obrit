@@ -4,17 +4,39 @@ import { LambdaClient } from "@aws-sdk/client-lambda";
 import { RDSClient } from "@aws-sdk/client-rds";
 import { S3Client } from "@aws-sdk/client-s3";
 import { IAMClient } from "@aws-sdk/client-iam";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { SQSClient } from "@aws-sdk/client-sqs";
+import { SNSClient } from "@aws-sdk/client-sns";
+import { APIGatewayClient } from "@aws-sdk/client-api-gateway";
+import { CloudFrontClient } from "@aws-sdk/client-cloudfront";
+import { ECSClient } from "@aws-sdk/client-ecs";
+import { EKSClient } from "@aws-sdk/client-eks";
+import { SFNClient } from "@aws-sdk/client-sfn";
+import { ElastiCacheClient } from "@aws-sdk/client-elasticache";
+import { CostExplorerClient } from "@aws-sdk/client-cost-explorer";
+
 import type { Resource, Edge, ScanRun, ScanError } from "@orbit/core";
 import { nanoid } from "nanoid";
 import pino from "pino";
 import { query } from "../db/client.js";
 import { decrypt } from "../crypto/credentials.js";
+
 import { discoverEc2 } from "./discovery/ec2.js";
 import { discoverElb } from "./discovery/elb.js";
 import { discoverLambda } from "./discovery/lambda.js";
 import { discoverRds } from "./discovery/rds.js";
 import { discoverS3 } from "./discovery/s3.js";
 import { discoverIam } from "./discovery/iam.js";
+import { discoverDynamoDb } from "./discovery/dynamodb.js";
+import { discoverSqs } from "./discovery/sqs.js";
+import { discoverSns } from "./discovery/sns.js";
+import { discoverApiGateway } from "./discovery/apigateway.js";
+import { discoverCloudFront } from "./discovery/cloudfront.js";
+import { discoverEcs } from "./discovery/ecs.js";
+import { discoverEks } from "./discovery/eks.js";
+import { discoverStepFunctions } from "./discovery/stepfunctions.js";
+import { discoverElastiCache } from "./discovery/elasticache.js";
+import { getActiveBillingServices, findUnplannedServices } from "./discovery/cost-explorer.js";
 
 const logger = pino({ name: "scan-orchestrator" });
 
@@ -63,13 +85,28 @@ function createClients(creds: AccountCredentials) {
     },
   };
 
+  const globalConfig = {
+    ...config,
+    region: "us-east-1",
+  };
+
   return {
     ec2: new EC2Client(config),
     elb: new ElasticLoadBalancingV2Client(config),
     lambda: new LambdaClient(config),
     rds: new RDSClient(config),
     s3: new S3Client(config),
-    iam: new IAMClient({ ...config, region: "us-east-1" }), // IAM is global
+    iam: new IAMClient(globalConfig),
+    dynamodb: new DynamoDBClient(config),
+    sqs: new SQSClient(config),
+    sns: new SNSClient(config),
+    apigateway: new APIGatewayClient(config),
+    cloudfront: new CloudFrontClient(globalConfig),
+    ecs: new ECSClient(config),
+    eks: new EKSClient(config),
+    sfn: new SFNClient(config),
+    elasticache: new ElastiCacheClient(config),
+    ce: new CostExplorerClient(globalConfig),
   };
 }
 
@@ -91,9 +128,9 @@ export async function runScan(accountId: string): Promise<ScanRun> {
     [scanId, accountId, creds.region, "running"]
   );
 
-  logger.info({ scanId, accountId, region: creds.region }, "Starting scan");
+  logger.info({ scanId, accountId, region: creds.region }, "Starting full-account scan");
 
-  // ─── Run all discovery modules ──────────────────────────────────────────
+  // ─── Config-driven discovery module list ──────────────────────────────────
   const discoveries = [
     { name: "ec2", fn: () => discoverEc2(clients.ec2, accountId, creds.region) },
     { name: "elb", fn: () => discoverElb(clients.elb, accountId, creds.region) },
@@ -101,6 +138,15 @@ export async function runScan(accountId: string): Promise<ScanRun> {
     { name: "rds", fn: () => discoverRds(clients.rds, accountId, creds.region) },
     { name: "s3", fn: () => discoverS3(clients.s3, accountId, creds.region) },
     { name: "iam", fn: () => discoverIam(clients.iam, accountId) },
+    { name: "dynamodb", fn: () => discoverDynamoDb(clients.dynamodb, accountId, creds.region) },
+    { name: "sqs", fn: () => discoverSqs(clients.sqs, accountId, creds.region) },
+    { name: "sns", fn: () => discoverSns(clients.sns, accountId, creds.region) },
+    { name: "apigateway", fn: () => discoverApiGateway(clients.apigateway, accountId, creds.region) },
+    { name: "cloudfront", fn: () => discoverCloudFront(clients.cloudfront, accountId, creds.region) },
+    { name: "ecs", fn: () => discoverEcs(clients.ecs, accountId, creds.region) },
+    { name: "eks", fn: () => discoverEks(clients.eks, accountId, creds.region) },
+    { name: "stepfunctions", fn: () => discoverStepFunctions(clients.sfn, accountId, creds.region) },
+    { name: "elasticache", fn: () => discoverElastiCache(clients.elasticache, accountId, creds.region) },
   ];
 
   // Run discoveries sequentially to respect rate limits
@@ -126,6 +172,17 @@ export async function runScan(accountId: string): Promise<ScanRun> {
       errors.push(error);
       logger.error({ scanId, service: disc.name, err }, `${disc.name} discovery failed`);
     }
+  }
+
+  // ─── Unplanned / Unmapped Services Detector (via Cost Explorer) ───────────
+  let unplannedServices: string[] = [];
+  try {
+    const activeBillingServices = await getActiveBillingServices(clients.ce, accountId);
+    const mappedTypes = new Set(allResources.map((r) => r.type));
+    unplannedServices = findUnplannedServices(activeBillingServices, mappedTypes);
+    logger.info({ scanId, unplannedServices }, "Unplanned services evaluated from billing data");
+  } catch (ceErr) {
+    logger.warn({ scanId, ceErr }, "Failed to evaluate unplanned services from Cost Explorer");
   }
 
   // ─── Persist resources (upsert on ARN) ──────────────────────────────────
@@ -182,13 +239,21 @@ export async function runScan(accountId: string): Promise<ScanRun> {
        finished_at = NOW(),
        resource_count = $1,
        status = $2,
-       errors = $3
-     WHERE id = $4`,
-    [allResources.length, status, JSON.stringify(errors), scanId]
+       errors = $3,
+       unplanned_services = $4
+     WHERE id = $5`,
+    [allResources.length, status, JSON.stringify(errors), JSON.stringify(unplannedServices), scanId]
   );
 
   logger.info(
-    { scanId, resources: allResources.length, edges: allEdges.length, errors: errors.length, status },
+    {
+      scanId,
+      resources: allResources.length,
+      edges: allEdges.length,
+      errors: errors.length,
+      status,
+      unplannedServices,
+    },
     "Scan complete"
   );
 
@@ -201,6 +266,7 @@ export async function runScan(accountId: string): Promise<ScanRun> {
     resourceCount: allResources.length,
     status,
     errors,
+    unplannedServices,
   };
 
   return scanRun;

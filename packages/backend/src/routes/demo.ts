@@ -485,11 +485,12 @@ export async function demoRoutes(app: FastifyInstance): Promise<void> {
     ];
 
     // 4. Create scan record
+    const unplannedDemoServices = ["DynamoDB", "SQS", "CloudFront"];
     await query(
-      `INSERT INTO scan_runs (id, account_id, region, started_at, finished_at, resource_count, status, errors)
-       VALUES ($1, $2, $3, NOW(), NOW(), $4, $5, '[]'::jsonb)
+      `INSERT INTO scan_runs (id, account_id, region, started_at, finished_at, resource_count, status, errors, unplanned_services)
+       VALUES ($1, $2, $3, NOW(), NOW(), $4, $5, '[]'::jsonb, $6)
        ON CONFLICT (id) DO NOTHING`,
-      [scanId, demoAccountId, region, resources.length, "completed"]
+      [scanId, demoAccountId, region, resources.length, "completed", JSON.stringify(unplannedDemoServices)]
     );
 
     // 5. Upsert resources
@@ -546,6 +547,7 @@ export async function demoRoutes(app: FastifyInstance): Promise<void> {
       resourceCount: resources.length,
       status: "completed",
       errors: [],
+      unplannedServices: unplannedDemoServices,
     };
 
     return reply.status(201).send({

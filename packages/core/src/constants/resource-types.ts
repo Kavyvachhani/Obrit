@@ -29,6 +29,28 @@ export const RESOURCE_TYPES = {
 
   // Identity
   IAM_ROLE: "iam:role",
+
+  // NoSQL Database
+  DYNAMODB_TABLE: "dynamodb:table",
+
+  // Messaging & Queues
+  SQS_QUEUE: "sqs:queue",
+  SNS_TOPIC: "sns:topic",
+
+  // API & Edge Distribution
+  API_GATEWAY: "apigateway:api",
+  CLOUDFRONT_DISTRIBUTION: "cloudfront:distribution",
+
+  // Containers & Orchestration
+  ECS_CLUSTER: "ecs:cluster",
+  ECS_SERVICE: "ecs:service",
+  EKS_CLUSTER: "eks:cluster",
+
+  // Workflows & Serverless Orchestration
+  STEP_FUNCTION: "stepfunctions:state-machine",
+
+  // In-Memory Cache
+  ELASTICACHE_CLUSTER: "elasticache:cluster",
 } as const;
 
 export type ResourceType = (typeof RESOURCE_TYPES)[keyof typeof RESOURCE_TYPES];
@@ -52,6 +74,16 @@ export const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {
   [RESOURCE_TYPES.RDS_CLUSTER]: "RDS Cluster",
   [RESOURCE_TYPES.S3_BUCKET]: "S3 Bucket",
   [RESOURCE_TYPES.IAM_ROLE]: "IAM Role",
+  [RESOURCE_TYPES.DYNAMODB_TABLE]: "DynamoDB Table",
+  [RESOURCE_TYPES.SQS_QUEUE]: "SQS Queue",
+  [RESOURCE_TYPES.SNS_TOPIC]: "SNS Topic",
+  [RESOURCE_TYPES.API_GATEWAY]: "API Gateway",
+  [RESOURCE_TYPES.CLOUDFRONT_DISTRIBUTION]: "CloudFront Distribution",
+  [RESOURCE_TYPES.ECS_CLUSTER]: "ECS Cluster",
+  [RESOURCE_TYPES.ECS_SERVICE]: "ECS Service",
+  [RESOURCE_TYPES.EKS_CLUSTER]: "EKS Cluster",
+  [RESOURCE_TYPES.STEP_FUNCTION]: "Step Function",
+  [RESOURCE_TYPES.ELASTICACHE_CLUSTER]: "ElastiCache Cluster",
 };
 
 /**
@@ -74,6 +106,16 @@ export const RESOURCE_TYPE_COLORS: Record<ResourceType, string> = {
   [RESOURCE_TYPES.RDS_CLUSTER]: "#2563eb",     // Darker blue — database cluster
   [RESOURCE_TYPES.S3_BUCKET]: "#10b981",       // Emerald — storage
   [RESOURCE_TYPES.IAM_ROLE]: "#ec4899",        // Pink — identity
+  [RESOURCE_TYPES.DYNAMODB_TABLE]: "#4338ca",   // Deep Indigo — DynamoDB
+  [RESOURCE_TYPES.SQS_QUEUE]: "#ec4899",       // Rose — messaging
+  [RESOURCE_TYPES.SNS_TOPIC]: "#f43f5e",       // Coral — pub/sub
+  [RESOURCE_TYPES.API_GATEWAY]: "#0ea5e9",     // Sky Blue — API
+  [RESOURCE_TYPES.CLOUDFRONT_DISTRIBUTION]: "#6366f1", // Violet — CDN
+  [RESOURCE_TYPES.ECS_CLUSTER]: "#f97316",     // Orange — containers
+  [RESOURCE_TYPES.ECS_SERVICE]: "#ea580c",     // Deep Orange — ECS service
+  [RESOURCE_TYPES.EKS_CLUSTER]: "#d97706",     // Amber — Kubernetes
+  [RESOURCE_TYPES.STEP_FUNCTION]: "#d946ef",   // Fuchsia — workflow
+  [RESOURCE_TYPES.ELASTICACHE_CLUSTER]: "#3b82f6", // Blue — caching
 };
 
 /**

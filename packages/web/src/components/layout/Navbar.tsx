@@ -49,6 +49,8 @@ export const Navbar: React.FC = () => {
     setFaultsOpen,
     isSecurityHeatmap,
     toggleSecurityHeatmap,
+    unplannedServices,
+    setUnplannedServices,
   } = useGraphStore();
 
   const {
@@ -87,14 +89,21 @@ export const Navbar: React.FC = () => {
   }, []);
 
   const handleRefresh = async () => {
-    if (!activeAccountId) {
-      setConnectModalOpen(true);
+    if (!activeAccountId || activeAccountId === "demo") {
+      setScanning(true);
+      setTimeout(() => {
+        setScanning(false);
+        setLastScannedAt(new Date().toLocaleTimeString());
+      }, 500);
       return;
     }
 
     try {
       setScanning(true);
-      await triggerScan(activeAccountId);
+      const scanRes = await triggerScan(activeAccountId);
+      if (scanRes && scanRes.unplannedServices) {
+        setUnplannedServices(scanRes.unplannedServices);
+      }
       const graph = await fetchGraph(activeAccountId);
       if (graph) {
         setGraphData(graph);
@@ -529,6 +538,46 @@ export const Navbar: React.FC = () => {
           <Radio className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      {/* ── Row 3: Deterministic Unplanned / Unmapped Services Detector Banner ── */}
+      {unplannedServices && unplannedServices.length > 0 && (
+        <div className="pointer-events-auto flex items-center justify-between gap-3 px-4 py-2 bg-[#151A24]/95 backdrop-blur-md border border-[#F2B33D]/40 rounded-xl shadow-2xl text-xs font-sans max-w-4xl animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-[#F2B33D]/15 border border-[#F2B33D]/40 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-3.5 h-3.5 text-[#F2B33D]" />
+            </div>
+            <div className="text-[#E6E9EF] truncate">
+              <span className="font-semibold text-[#F2B33D]">
+                {unplannedServices.length} service{unplannedServices.length > 1 ? "s" : ""} detected with usage
+              </span>{" "}
+              but not yet visualized:{" "}
+              <span className="font-mono text-[#F2B33D] bg-[#0B0E14] px-1.5 py-0.5 rounded border border-[#262D3A]">
+                {unplannedServices.join(", ")}
+              </span>{" "}
+              — add to next scan?
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleRefresh}
+              disabled={isScanning}
+              className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#F2B33D]/20 to-[#FF9900]/20 hover:from-[#F2B33D]/30 hover:to-[#FF9900]/30 border border-[#F2B33D]/50 text-[#F2B33D] font-semibold text-[11px] transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+              title="Add detected services to scan pipeline"
+            >
+              <RotateCcw className={`w-3 h-3 ${isScanning ? "animate-spin" : ""}`} />
+              <span>Add to next scan</span>
+            </button>
+            <button
+              onClick={() => setUnplannedServices([])}
+              className="p-1 text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/60 rounded-md transition-colors"
+              title="Dismiss banner"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

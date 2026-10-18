@@ -94,6 +94,7 @@ export interface ScanRun {
   resourceCount: number;
   status: ScanStatus;
   errors: ScanError[];
+  unplannedServices?: string[];
 }
 
 // ─── Connected Account ───────────────────────────────────────────────────────

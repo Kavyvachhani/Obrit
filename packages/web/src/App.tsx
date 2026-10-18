@@ -13,8 +13,10 @@ import { fetchGraph } from "./lib/api.js";
 
 import { DEFAULT_AWS_TOPOLOGY } from "./lib/architecture-data.js";
 
+import { GraphErrorBoundary } from "./components/graph/GraphErrorBoundary.js";
+
 export const App: React.FC = () => {
-  const { viewMode, setGraphData, setLoading } = useGraphStore();
+  const { viewMode, setViewMode, setGraphData, setLoading } = useGraphStore();
   const { activeAccountId, loadAccounts } = useAccountStore();
 
   // Load accounts on initial mount
@@ -58,7 +60,13 @@ export const App: React.FC = () => {
     <div className="relative w-screen h-screen bg-[#0B0E14] select-none overflow-hidden font-sans text-[#E6E9EF]">
       {/* Full-bleed 3D/2D Canvas */}
       <main className="absolute inset-0 w-full h-full overflow-hidden bg-[#0B0E14]">
-        {viewMode === "3d" ? <Graph3D /> : <Graph2D />}
+        {viewMode === "3d" ? (
+          <GraphErrorBoundary fallbackTo2D={() => setViewMode("2d")}>
+            <Graph3D />
+          </GraphErrorBoundary>
+        ) : (
+          <Graph2D />
+        )}
       </main>
 
       {/* Floating Top Navigation Chrome (Wireframe Row 1 & Row 2) */}

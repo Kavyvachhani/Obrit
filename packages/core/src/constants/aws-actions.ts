@@ -9,7 +9,7 @@
  * This list is the single source of truth. If an action isn't here, it's blocked.
  */
 
-export const AWS_ALLOWED_ACTIONS: ReadonlySet<string> = new Set([
+export const CORE_ALLOWED_ACTIONS: string[] = [
   // ─── EC2 ─────────────────────────────────────────────────────────────────
   "DescribeVpcs",
   "DescribeSubnets",
@@ -40,14 +40,76 @@ export const AWS_ALLOWED_ACTIONS: ReadonlySet<string> = new Set([
   // ─── IAM ─────────────────────────────────────────────────────────────────
   "ListRoles",
   "ListAttachedRolePolicies",
-]);
+
+  // ─── DynamoDB ────────────────────────────────────────────────────────────
+  "ListTables",
+  "DescribeTable",
+
+  // ─── SQS ─────────────────────────────────────────────────────────────────
+  "ListQueues",
+  "GetQueueAttributes",
+
+  // ─── SNS ─────────────────────────────────────────────────────────────────
+  "ListTopics",
+  "GetTopicAttributes",
+
+  // ─── API Gateway ─────────────────────────────────────────────────────────
+  "GetRestApis",
+  "GetApis",
+  "GetStages",
+
+  // ─── CloudFront ──────────────────────────────────────────────────────────
+  "ListDistributions",
+  "GetDistribution",
+
+  // ─── ECS ─────────────────────────────────────────────────────────────────
+  "ListClusters",
+  "DescribeClusters",
+  "ListServices",
+  "DescribeServices",
+
+  // ─── EKS ─────────────────────────────────────────────────────────────────
+  "ListClusters",
+  "DescribeCluster",
+
+  // ─── Step Functions ──────────────────────────────────────────────────────
+  "ListStateMachines",
+  "DescribeStateMachine",
+
+  // ─── ElastiCache ─────────────────────────────────────────────────────────
+  "DescribeCacheClusters",
+  "DescribeReplicationGroups",
+
+  // ─── Cost Explorer (Unplanned Services Detector) ─────────────────────────
+  "GetCostAndUsage",
+  "GetDimensionValues",
+];
+
+const dynamicAllowedActions = new Set<string>(CORE_ALLOWED_ACTIONS);
+
+export const AWS_ALLOWED_ACTIONS: ReadonlySet<string> = dynamicAllowedActions;
+
+/**
+ * Register additional read-only actions dynamically (extensible/config-driven).
+ * Enforces that only Describe*, List*, and Get* actions can be registered.
+ */
+export function registerAllowedActions(actions: string[]): void {
+  for (const action of actions) {
+    if (/^(Describe|List|Get)[A-Z0-9]/.test(action) && !isMutatingAction(action)) {
+      dynamicAllowedActions.add(action);
+    } else {
+      throw new Error(`Cannot register non-read-only action: ${action}`);
+    }
+  }
+}
 
 /**
  * Check whether an AWS API action name is in the read-only allow-list.
- * This is a pure function — the enforcement wrapper lives in the backend.
+ * Supports registered actions and verifies read-only prefix.
  */
 export function isAllowedAction(actionName: string): boolean {
-  return AWS_ALLOWED_ACTIONS.has(actionName);
+  if (isMutatingAction(actionName)) return false;
+  return dynamicAllowedActions.has(actionName);
 }
 
 /**

@@ -106,7 +106,7 @@ export function applyStructuredArchitectureLayout(
     }
 
     return {
-      positionedNodes,
+      positionedNodes: resolveNodeCollisions(positionedNodes, is3D, is3D ? 90 : 80),
       ingressBounds: [
         {
           id: "platform-ingress-edge",
@@ -259,13 +259,38 @@ export function applyStructuredArchitectureLayout(
     const t = node.type.toLowerCase();
     const n = node.name.toLowerCase();
 
-    if (t.includes("gateway") || n.includes("igw") || n.includes("nat-") || t.includes("nat")) {
+    if (
+      t.startsWith("cloudfront:") ||
+      t.startsWith("apigateway:") ||
+      t.includes("gateway") ||
+      n.includes("igw") ||
+      n.includes("nat-") ||
+      t.includes("nat")
+    ) {
       ingressList.push(node);
-    } else if (t.startsWith("elb:") || n.includes("alb") || n.includes("loadbalancer") || n.includes("targetgroup")) {
+    } else if (
+      t.startsWith("elb:") ||
+      n.includes("alb") ||
+      n.includes("loadbalancer") ||
+      n.includes("targetgroup")
+    ) {
       dmzList.push(node);
-    } else if (t.startsWith("rds:") || n.includes("db-") || n.includes("aurora") || n.includes("mysql") || n.includes("postgres")) {
+    } else if (
+      t.startsWith("rds:") ||
+      t.startsWith("elasticache:") ||
+      n.includes("db-") ||
+      n.includes("aurora") ||
+      n.includes("mysql") ||
+      n.includes("postgres") ||
+      n.includes("cache") ||
+      n.includes("redis")
+    ) {
       dbList.push(node);
-    } else if (t.startsWith("ec2:instance")) {
+    } else if (
+      t.startsWith("ec2:instance") ||
+      t.startsWith("ecs:") ||
+      t.startsWith("eks:")
+    ) {
       appVpcList.push(node);
     } else if (t.startsWith("lambda:")) {
       lambdaList.push(node);
@@ -713,7 +738,68 @@ export function applyStructuredArchitectureLayout(
     }
   }
 
-  return { positionedNodes, subnetBounds, vpcBounds, azBounds, regionalBounds, ingressBounds };
+  const collisionResolvedNodes = resolveNodeCollisions(positionedNodes, is3D, is3D ? 90 : 80);
+
+  return {
+    positionedNodes: collisionResolvedNodes,
+    subnetBounds,
+    vpcBounds,
+    azBounds,
+    regionalBounds,
+    ingressBounds,
+  };
+}
+
+/**
+ * Collision resolution constraint: guarantees minimum distance between any two node centers.
+ * Performs iterative relaxation so no two node icons can ever overlap.
+ */
+export function resolveNodeCollisions(
+  nodes: PositionedNode[],
+  is3D = false,
+  minDistance = 80
+): PositionedNode[] {
+  const iterations = 15;
+  for (let iter = 0; iter < iterations; iter++) {
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const n1 = nodes[i];
+        const n2 = nodes[j];
+        if (!n1 || !n2) continue;
+
+        const dx = n1.x - n2.x;
+        const dy = is3D ? (n1.z ?? 0) - (n2.z ?? 0) : n1.y - n2.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < minDistance) {
+          const overlap = minDistance - dist;
+          const angle = dist > 0.001 ? Math.atan2(dy, dx) : ((i + 1) * 0.73 + (j + 1) * 0.37);
+          const moveDist = overlap / 2 + 0.5;
+
+          const offsetX = Math.cos(angle) * moveDist;
+          const offsetY = Math.sin(angle) * moveDist;
+
+          n1.x += offsetX;
+          n2.x -= offsetX;
+          n1.fx = n1.x;
+          n2.fx = n2.x;
+
+          if (is3D) {
+            n1.z = (n1.z ?? 0) + offsetY;
+            n2.z = (n2.z ?? 0) - offsetY;
+            n1.fz = n1.z;
+            n2.fz = n2.z;
+          } else {
+            n1.y += offsetY;
+            n2.y -= offsetY;
+            n1.fy = n1.y;
+            n2.fy = n2.y;
+          }
+        }
+      }
+    }
+  }
+  return nodes;
 }
 
 /**

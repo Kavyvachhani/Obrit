@@ -29,8 +29,13 @@ export async function runMigrations(): Promise<void> {
       finished_at     TIMESTAMPTZ,
       resource_count  INTEGER NOT NULL DEFAULT 0,
       status          TEXT NOT NULL DEFAULT 'running',
-      errors          JSONB NOT NULL DEFAULT '[]'::jsonb
+      errors          JSONB NOT NULL DEFAULT '[]'::jsonb,
+      unplanned_services JSONB NOT NULL DEFAULT '[]'::jsonb
     );
+  `);
+
+  await query(`
+    ALTER TABLE scan_runs ADD COLUMN IF NOT EXISTS unplanned_services JSONB NOT NULL DEFAULT '[]'::jsonb;
   `);
 
   await query(`

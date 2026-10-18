@@ -37,31 +37,101 @@ export interface ServiceStyle {
   badgeBg: string;     // Badge background color
   accentGlow: string;  // Glow / accent highlight
   shortType: string;   // Human label
-  iconType: "ec2" | "lambda" | "rds" | "s3" | "vpc" | "subnet" | "alb" | "igw" | "nat" | "sg" | "iam" | "route53" | "cloudfront" | "ecs" | "default";
+  iconType:
+    | "ec2"
+    | "lambda"
+    | "rds"
+    | "s3"
+    | "vpc"
+    | "subnet"
+    | "alb"
+    | "elb"
+    | "igw"
+    | "nat"
+    | "sg"
+    | "iam"
+    | "dynamodb"
+    | "sqs"
+    | "sns"
+    | "apigateway"
+    | "cloudfront"
+    | "ecs"
+    | "eks"
+    | "stepfunctions"
+    | "elasticache"
+    | "routetable"
+    | "eni"
+    | "default";
+}
+
+const officialIconCache = new Map<string, HTMLImageElement>();
+
+export function getOfficialIconImage(iconType: string): HTMLImageElement | null {
+  if (typeof Image === "undefined") return null;
+  if (!officialIconCache.has(iconType)) {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = `/aws-icons/${iconType}.png`;
+    officialIconCache.set(iconType, img);
+  }
+  return officialIconCache.get(iconType)!;
 }
 
 export function getServiceStyle(type: string, name = ""): ServiceStyle {
   const n = name.toLowerCase();
   const t = type.toLowerCase();
 
-  if (t.startsWith("ec2:instance"))
+  // Compute
+  if (t.startsWith("ec2:instance") || n.includes("i-"))
     return { color: "#FF9900", badgeBg: "#FF9900", accentGlow: "rgba(255,153,0,0.25)", shortType: "EC2", iconType: "ec2" };
-  if (t.startsWith("lambda:"))
+  if (t.startsWith("lambda:") || n.includes("func-"))
     return { color: "#ED7100", badgeBg: "#ED7100", accentGlow: "rgba(237,113,0,0.25)", shortType: "Lambda", iconType: "lambda" };
-  if (t.startsWith("rds:"))
+  if (t.startsWith("ecs:"))
+    return { color: "#F97316", badgeBg: "#F97316", accentGlow: "rgba(249,115,22,0.25)", shortType: "ECS", iconType: "ecs" };
+  if (t.startsWith("eks:"))
+    return { color: "#D97706", badgeBg: "#D97706", accentGlow: "rgba(217,119,6,0.25)", shortType: "EKS", iconType: "eks" };
+
+  // Database & Cache
+  if (t.startsWith("rds:") || n.includes("db-") || n.includes("aurora"))
     return { color: "#3B48CC", badgeBg: "#3B48CC", accentGlow: "rgba(59,72,204,0.25)", shortType: "RDS", iconType: "rds" };
-  if (t.startsWith("s3:"))
+  if (t.startsWith("dynamodb:") || n.includes("table-") || n.includes("dynamo"))
+    return { color: "#4338CA", badgeBg: "#4338CA", accentGlow: "rgba(67,56,202,0.25)", shortType: "DynamoDB", iconType: "dynamodb" };
+  if (t.startsWith("elasticache:") || n.includes("cache-") || n.includes("redis"))
+    return { color: "#3B82F6", badgeBg: "#3B82F6", accentGlow: "rgba(59,130,246,0.25)", shortType: "ElastiCache", iconType: "elasticache" };
+
+  // Storage
+  if (t.startsWith("s3:") || n.includes("s3-") || n.includes("bucket"))
     return { color: "#3F8624", badgeBg: "#3F8624", accentGlow: "rgba(63,134,36,0.25)", shortType: "S3", iconType: "s3" };
-  if (t === "vpc:vpc")
+
+  // Networking & Edge
+  if (t === "vpc:vpc" || n.includes("vpc-"))
     return { color: "#8C4FFF", badgeBg: "#8C4FFF", accentGlow: "rgba(140,79,255,0.25)", shortType: "VPC", iconType: "vpc" };
-  if (t === "vpc:subnet")
+  if (t === "vpc:subnet" || n.includes("subnet-"))
     return { color: "#147EBA", badgeBg: "#147EBA", accentGlow: "rgba(20,126,186,0.25)", shortType: "Subnet", iconType: "subnet" };
   if (t.startsWith("elb:") || n.includes("alb") || n.includes("targetgroup"))
     return { color: "#8C4FFF", badgeBg: "#8C4FFF", accentGlow: "rgba(140,79,255,0.25)", shortType: "ELB", iconType: "alb" };
   if (n.includes("nat") || t.includes("nat-gateway"))
     return { color: "#8C4FFF", badgeBg: "#8C4FFF", accentGlow: "rgba(140,79,255,0.25)", shortType: "NAT GW", iconType: "nat" };
-  if (t.includes("gateway") || n.includes("igw"))
+  if (t.includes("internet-gateway") || n.includes("igw"))
     return { color: "#8C4FFF", badgeBg: "#8C4FFF", accentGlow: "rgba(140,79,255,0.25)", shortType: "IGW", iconType: "igw" };
+  if (t === "vpc:route-table" || n.includes("rtb-"))
+    return { color: "#8C4FFF", badgeBg: "#8C4FFF", accentGlow: "rgba(140,79,255,0.25)", shortType: "Route Table", iconType: "routetable" };
+  if (t === "ec2:network-interface" || n.includes("eni-"))
+    return { color: "#94A3B8", badgeBg: "#94A3B8", accentGlow: "rgba(148,163,184,0.25)", shortType: "ENI", iconType: "eni" };
+  if (t.startsWith("cloudfront:") || n.includes("cf-") || n.includes("cdn"))
+    return { color: "#6366F1", badgeBg: "#6366F1", accentGlow: "rgba(99,102,241,0.25)", shortType: "CloudFront", iconType: "cloudfront" };
+  if (t.startsWith("apigateway:") || n.includes("api-"))
+    return { color: "#0EA5E9", badgeBg: "#0EA5E9", accentGlow: "rgba(14,165,233,0.25)", shortType: "API GW", iconType: "apigateway" };
+
+  // Messaging & Workflow
+  if (t.startsWith("sqs:") || n.includes("queue"))
+    return { color: "#EC4899", badgeBg: "#EC4899", accentGlow: "rgba(236,72,153,0.25)", shortType: "SQS", iconType: "sqs" };
+  if (t.startsWith("sns:") || n.includes("topic"))
+    return { color: "#F43F5E", badgeBg: "#F43F5E", accentGlow: "rgba(244,63,94,0.25)", shortType: "SNS", iconType: "sns" };
+  if (t.startsWith("stepfunctions:") || n.includes("sfn-") || n.includes("sm-"))
+    return { color: "#D946EF", badgeBg: "#D946EF", accentGlow: "rgba(217,70,239,0.25)", shortType: "Step Fn", iconType: "stepfunctions" };
+
+  // Security & Identity
   if (t.includes("security-group") || n.includes("sg-"))
     return { color: "#DD344C", badgeBg: "#DD344C", accentGlow: "rgba(221,52,76,0.25)", shortType: "SG", iconType: "sg" };
   if (t.startsWith("iam:") || n.includes("role-"))
@@ -71,11 +141,7 @@ export function getServiceStyle(type: string, name = ""): ServiceStyle {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   DRAW OFFICIAL AWS ARCHITECTURE VECTOR ICON (2D Canvas)
-   
-   Renders crisp, recognizable AWS service icons inside a 
-   rounded-square badge with gradient shading, matching the
-   official AWS Architecture Icon Set aesthetics.
+   DRAW OFFICIAL AWS ARCHITECTURE ICON (Using Official AWS Icon Package)
    ─────────────────────────────────────────────────────────── */
 export function drawOfficialAwsVectorIcon(
   ctx: CanvasRenderingContext2D,
@@ -88,7 +154,7 @@ export function drawOfficialAwsVectorIcon(
   ctx.save();
   ctx.translate(x, y);
 
-  // Badge background with gradient
+  // Badge background with gradient matching official AWS console palette
   const grad = ctx.createLinearGradient(0, 0, 0, size);
   grad.addColorStop(0, badgeBg);
   grad.addColorStop(1, darkenColor(badgeBg, 0.25));
@@ -107,7 +173,16 @@ export function drawOfficialAwsVectorIcon(
   ctx.lineWidth = size * 0.03;
   ctx.stroke();
 
-  // Inner icon setup
+  // 1. Try rendering from official AWS Icon Package
+  const img = getOfficialIconImage(iconType);
+  if (img && img.complete && img.naturalWidth > 0) {
+    const pad = size * 0.14;
+    ctx.drawImage(img, pad, pad, size - pad * 2, size - pad * 2);
+    ctx.restore();
+    return;
+  }
+
+  // 2. Vector fallback if image is still loading or unavailable
   ctx.fillStyle = "#ffffff";
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = Math.max(1.8, size * 0.045);

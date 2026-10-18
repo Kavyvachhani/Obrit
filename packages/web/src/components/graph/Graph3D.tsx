@@ -8,6 +8,18 @@ import { applyStructuredArchitectureLayout, getOptimizedLinks } from "../../lib/
 import { simulateThreatBlastRadius } from "../../lib/fault-tolerance.js";
 import type { GraphNode, GraphLink } from "@orbit/core";
 
+function isWebGLAvailable(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    return Boolean(
+      window.WebGLRenderingContext &&
+        (canvas.getContext("webgl2") || canvas.getContext("webgl") || canvas.getContext("experimental-webgl"))
+    );
+  } catch {
+    return false;
+  }
+}
+
 /* ─────────────────────────────────────────────────────────────
    3D TOPOLOGY VIEW
    
@@ -21,6 +33,7 @@ import type { GraphNode, GraphLink } from "@orbit/core";
 export const Graph3D: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<ForceGraph3DInstance | null>(null);
+  const [initError, setInitError] = React.useState<string | null>(null);
   const pointerPosRef = useRef({ x: 0, y: 0 });
   const lastPointerMove = useRef(0);
 
@@ -86,17 +99,43 @@ export const Graph3D: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const container = containerRef.current;
+    if (!container) return;
 
-    const fg = new ForceGraph3D(containerRef.current)
-      .backgroundColor("#0C101A")
-      .showNavInfo(false)
-      .nodeThreeObject((node) => {
-        const gNode = node as unknown as GraphNode;
-        const isSelected = selectedNode?.id === gNode.id;
-        const isHovered = hoveredNode?.id === gNode.id;
-        return create3DNodeObject(gNode, isSelected, isHovered);
-      })
+    // 1. Detect WebGL2 / WebGL capability. If missing, auto-fallback to 2D
+    if (!isWebGLAvailable()) {
+      console.warn("[Graph3D] WebGL is unsupported or hardware acceleration is disabled. Auto-falling back to 2D.");
+      setViewMode("2d");
+      return;
+    }
+
+    let fg: ForceGraph3DInstance | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let cancelled = false;
+    let checkInterval: any = null;
+
+    const setupGraph = () => {
+      if (cancelled || !containerRef.current) return;
+      const cont = containerRef.current;
+      if (cont.clientWidth === 0 || cont.clientHeight === 0) return;
+
+      try {
+        // Clear any orphan canvas children from previous unmount
+        while (cont.firstChild) {
+          cont.removeChild(cont.firstChild);
+        }
+
+        fg = new ForceGraph3D(cont)
+          .backgroundColor("#0C101A")
+          .showNavInfo(false)
+          .width(cont.clientWidth)
+          .height(cont.clientHeight)
+          .nodeThreeObject((node) => {
+            const gNode = node as unknown as GraphNode;
+            const isSelected = selectedNode?.id === gNode.id;
+            const isHovered = hoveredNode?.id === gNode.id;
+            return create3DNodeObject(gNode, isSelected, isHovered);
+          })
       .nodeLabel((node) => {
         const gNode = node as unknown as GraphNode;
         const style = getServiceStyle(gNode.type, gNode.name);
@@ -364,7 +403,7 @@ export const Graph3D: React.FC = () => {
 
     // Billboard rotation on camera move
     const updateBillboards = () => {
-      const camera = fg.camera();
+      const camera = fg?.camera();
       if (camera) {
         scene.traverse((obj: any) => {
           if (obj.userData?.isBillboardCard && !obj.isSprite) {
@@ -395,39 +434,80 @@ export const Graph3D: React.FC = () => {
     setTimeout(updateBillboards, 200);
     setTimeout(updateBillboards, 600);
 
-    graphRef.current = fg;
+        const canvas = cont.querySelector("canvas");
+        const onContextLost = (e: Event) => {
+          e.preventDefault();
+          console.warn("[Graph3D] WebGL context lost. Auto-falling back to 2D mode.");
+          setViewMode("2d");
+        };
+        canvas?.addEventListener("webglcontextlost", onContextLost);
 
-    const resizeObserver = new ResizeObserver(() => {
-      if (containerRef.current && fg) {
-        fg.width(containerRef.current.clientWidth);
-        fg.height(containerRef.current.clientHeight);
-      }
-    });
-    resizeObserver.observe(containerRef.current);
+        resizeObserver = new ResizeObserver(() => {
+          if (containerRef.current && fg) {
+            fg.width(containerRef.current.clientWidth);
+            fg.height(containerRef.current.clientHeight);
+          }
+        });
+        resizeObserver.observe(cont);
 
-    const handleResetCamera = () => {
-      if (fg) {
-        fg.cameraPosition({ x: 180, y: 760, z: 580 }, { x: 120, y: -40, z: 0 }, 1000);
+        const handleResetCamera = () => {
+          if (fg) {
+            fg.cameraPosition({ x: 120, y: 1050, z: 0.1 }, { x: 120, y: -40, z: 0 }, 1000);
+          }
+        };
+
+        const handleFocusNode = (e: any) => {
+          const targetId = e.detail?.id;
+          const target = positionedNodes.find((n) => n.id === targetId);
+          if (target && fg) {
+            const { x = 0, y = 0, z = 0 } = target;
+            fg.cameraPosition({ x: x + 80, y: y + 50, z: z + 90 }, { x, y, z }, 1200);
+          }
+        };
+
+        window.addEventListener("orbit:reset-camera", handleResetCamera);
+        window.addEventListener("orbit:focus-node", handleFocusNode);
+
+        graphRef.current = fg;
+      } catch (err: any) {
+        console.error("[Graph3D] Error during 3D ForceGraph initialization:", err);
+        setInitError(err?.message || String(err));
+        setViewMode("2d");
       }
     };
 
-    const handleFocusNode = (e: any) => {
-      const targetId = e.detail?.id;
-      const target = positionedNodes.find((n) => n.id === targetId);
-      if (target && fg) {
-        const { x = 0, y = 0, z = 0 } = target;
-        fg.cameraPosition({ x: x + 80, y: y + 50, z: z + 90 }, { x, y, z }, 1200);
-      }
-    };
-
-    window.addEventListener("orbit:reset-camera", handleResetCamera);
-    window.addEventListener("orbit:focus-node", handleFocusNode);
+    // 2. Check for zero-dimension container at mount time
+    if (container.clientWidth === 0 || container.clientHeight === 0) {
+      console.log("[Graph3D] Container has 0 dimensions at mount time, awaiting layout...");
+      let attempts = 0;
+      checkInterval = setInterval(() => {
+        attempts++;
+        if (container.clientWidth > 0 && container.clientHeight > 0) {
+          clearInterval(checkInterval);
+          setupGraph();
+        } else if (attempts > 30) {
+          clearInterval(checkInterval);
+          console.warn("[Graph3D] Container remained 0-sized after layout wait. Auto-falling back to 2D.");
+          setViewMode("2d");
+        }
+      }, 50);
+    } else {
+      setupGraph();
+    }
 
     return () => {
-      window.removeEventListener("orbit:reset-camera", handleResetCamera);
-      window.removeEventListener("orbit:focus-node", handleFocusNode);
-      resizeObserver.disconnect();
-      fg._destructor();
+      cancelled = true;
+      if (checkInterval) clearInterval(checkInterval);
+      window.removeEventListener("orbit:reset-camera", () => {});
+      window.removeEventListener("orbit:focus-node", () => {});
+      if (resizeObserver) resizeObserver.disconnect();
+      if (fg) {
+        try {
+          if (typeof (fg as any)._destructor === "function") {
+            (fg as any)._destructor();
+          }
+        } catch { /* ignore */ }
+      }
     };
   }, []);
 
@@ -674,6 +754,20 @@ export const Graph3D: React.FC = () => {
       className="relative w-full h-full overflow-hidden bg-[#0C101A]"
     >
       <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+
+      {/* Visible Fallback Banner if 3D encounters an initialization issue */}
+      {initError && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 rounded-xl bg-[#1A0B0E]/95 border border-[#FF5C5C] text-white shadow-2xl backdrop-blur-md">
+          <span className="text-xs font-bold text-[#FF5C5C]">3D WebGL Notice:</span>
+          <span className="text-xs text-[#CBD5E1]">{initError}</span>
+          <button
+            onClick={() => setViewMode("2d")}
+            className="px-3 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded-lg text-xs font-semibold transition-colors"
+          >
+            Switch to 2D
+          </button>
+        </div>
+      )}
 
       {/* Humanized Top Architecture Diagram Header Banner */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex items-center gap-2.5 px-5 py-2 bg-[#121824]/92 backdrop-blur-md border border-[#2B374E] rounded-full shadow-2xl">
