@@ -1170,10 +1170,10 @@ function build3DLabelSprite(
     else ctx.rect(pad, pad, w, 8);
     ctx.fill();
 
-    // Service Icon Badge (Left)
-    const iconSize = 138;
-    const iconX = pad + 24;
-    const iconY = pad + (h - iconSize) / 2 + 4;
+    // Service Icon Badge (Large, Bold & Highly Visible)
+    const iconSize = 195;
+    const iconX = pad + 18;
+    const iconY = pad + (h - iconSize) / 2;
     drawOfficialAwsVectorIcon(
       ctx,
       style.iconType,
@@ -1184,7 +1184,7 @@ function build3DLabelSprite(
     );
 
     // Text Content Area
-    const textLeft = iconX + iconSize + 26;
+    const textLeft = iconX + iconSize + 28;
 
     // Service category tag
     ctx.font = "bold 32px 'Inter', sans-serif";

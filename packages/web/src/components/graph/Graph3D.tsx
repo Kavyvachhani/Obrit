@@ -621,68 +621,72 @@ export const Graph3D: React.FC = () => {
       }
     }
 
-    // Ingress Plates
+    // Ingress Platform Layover (Vivid Indigo / Violet)
     ingressBounds.forEach((b) => {
       addFloorPlate(group, {
-        width: Math.max(180, b.x2 - b.x1),
+        width: Math.max(200, b.x2 - b.x1),
         depth: Math.max(220, b.y2 - b.y1),
-        color: 0x8893A6,
-        opacity: 0.05,
-        edgeOpacity: 0.45,
-        position: [(b.x1 + b.x2) / 2, -75, (b.y1 + b.y2) / 2],
+        color: 0x818CF8,
+        opacity: 0.12,
+        edgeOpacity: 0.85,
+        position: [(b.x1 + b.x2) / 2, -43, (b.y1 + b.y2) / 2],
         label: b.name,
       });
     });
 
-    // VPC Outer Plates
+    // VPC Outer Platform Layover (Cyber Sky Blue)
     vpcBounds.forEach((b) => {
       addFloorPlate(group, {
         width: Math.max(300, b.x2 - b.x1),
         depth: Math.max(260, b.y2 - b.y1),
-        color: 0x8C4FFF,
-        opacity: 0.04,
-        edgeOpacity: 0.45,
-        position: [(b.x1 + b.x2) / 2, -76, (b.y1 + b.y2) / 2],
+        color: 0x38BDF8,
+        opacity: 0.08,
+        edgeOpacity: 0.75,
+        position: [(b.x1 + b.x2) / 2, -46, (b.y1 + b.y2) / 2],
         label: b.name,
       });
     });
 
-    // Availability Zones
+    // Availability Zones Layovers (AZ-1a Emerald/Cyan, AZ-1b Amber/Gold)
     azBounds.forEach((b) => {
+      const isAZb = b.azLabel?.includes("b") || b.azLabel?.includes("B");
       addFloorPlate(group, {
         width: Math.max(280, b.x2 - b.x1),
         depth: Math.max(140, b.y2 - b.y1),
-        color: b.azLabel?.includes("b") || b.azLabel?.includes("B") ? 0x38bdf8 : 0xFF9900,
-        opacity: 0.04,
-        edgeOpacity: 0.45,
-        position: [(b.x1 + b.x2) / 2, -74, b.z || 0],
+        color: isAZb ? 0xFBBF24 : 0x34D399,
+        opacity: 0.10,
+        edgeOpacity: 0.85,
+        position: [(b.x1 + b.x2) / 2, -44, (b.y1 + b.y2) / 2],
         label: b.name,
       });
     });
 
-    // Subnets
+    // Subnets Layovers (DMZ = Cyan, App = Blue, DB = Purple)
     subnetBounds.forEach((b) => {
+      const isDb = b.name.toLowerCase().includes("database") || b.name.toLowerCase().includes("db");
+      const col = isDb ? 0xA78BFA : b.isPublic ? 0x06B6D4 : 0x60A5FA;
       addFloorPlate(group, {
         width: Math.max(120, b.x2 - b.x1),
         depth: Math.max(120, b.y2 - b.y1),
-        color: b.isPublic ? 0x06b6d4 : 0x3b82f6,
-        opacity: 0.05,
-        edgeOpacity: 0.35,
-        position: [(b.x1 + b.x2) / 2, -73, b.z || 0],
+        color: col,
+        opacity: 0.12,
+        edgeOpacity: 0.75,
+        position: [(b.x1 + b.x2) / 2, -42, (b.y1 + b.y2) / 2],
         label: b.name,
       });
     });
 
-    // Regional & Serverless & Storage Plates
+    // Regional & Messaging & Storage Platform Layovers
     regionalBounds.forEach((b) => {
-      const col = b.id.includes("serverless") ? 0xED7100 : b.id.includes("s3") ? 0x3F8624 : 0xDD344C;
+      const isMessaging = b.id.includes("messaging") || b.name.toLowerCase().includes("sqs") || b.name.toLowerCase().includes("dynamo");
+      const col = isMessaging ? 0xF43F5E : 0x10B981;
       addFloorPlate(group, {
         width: Math.max(180, b.x2 - b.x1),
         depth: Math.max(200, b.y2 - b.y1),
         color: col,
-        opacity: 0.05,
-        edgeOpacity: 0.45,
-        position: [(b.x1 + b.x2) / 2, -75, (b.y1 + b.y2) / 2],
+        opacity: 0.12,
+        edgeOpacity: 0.85,
+        position: [(b.x1 + b.x2) / 2, -43, (b.y1 + b.y2) / 2],
         label: b.name,
       });
     });
@@ -877,27 +881,30 @@ interface FloorPlateConfig {
 
 function addFloorPlate(parent: THREE.Object3D, config: FloorPlateConfig) {
   // Extruded 3D slab box geometry for solid architectural depth
-  const slabHeight = 6;
+  const slabHeight = 4;
   const boxGeo = new THREE.BoxGeometry(config.width, slabHeight, config.depth);
 
-  // Sleek dark translucent graphite glass platform (eliminates muddy colored slabs)
+  // Subtle translucent glass platform with tier's distinct color accent
+  const baseColor = new THREE.Color(config.color);
+  const surfaceColor = new THREE.Color(0x0C101A).lerp(baseColor, 0.22);
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x0E131E,
+    color: surfaceColor,
     transparent: true,
-    opacity: 0.72,
-    metalness: 0.2,
-    roughness: 0.7,
+    opacity: 0.88,
+    metalness: 0.35,
+    roughness: 0.5,
     side: THREE.DoubleSide,
   });
   const slabMesh = new THREE.Mesh(boxGeo, mat);
   slabMesh.position.set(config.position[0], config.position[1] - slabHeight / 2, config.position[2]);
   parent.add(slabMesh);
 
-  // Glowing delicate perimeter outline around the top edge
+  // Glowing vivid perimeter outline around the top edge
   const edgeMat = new THREE.LineBasicMaterial({
     color: config.color,
     transparent: true,
-    opacity: 0.45,
+    opacity: 0.85,
+    linewidth: 2.5,
   });
   const topPlaneGeo = new THREE.PlaneGeometry(config.width, config.depth);
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(topPlaneGeo), edgeMat);
@@ -906,14 +913,14 @@ function addFloorPlate(parent: THREE.Object3D, config: FloorPlateConfig) {
   parent.add(edges);
 
   // 4 Cyber Corner Brackets (L-shaped accents at platform corners)
-  const bracketLen = Math.min(24, config.width * 0.08);
+  const bracketLen = Math.min(28, config.width * 0.08);
   const halfW = config.width / 2;
   const halfD = config.depth / 2;
   const bracketMat = new THREE.LineBasicMaterial({
     color: config.color,
     transparent: true,
-    opacity: 0.95,
-    linewidth: 2,
+    opacity: 1.0,
+    linewidth: 3,
   });
 
   const bracketPoints: THREE.Vector3[] = [
@@ -947,7 +954,7 @@ function addFloorPlate(parent: THREE.Object3D, config: FloorPlateConfig) {
   if (ctx) {
     ctx.clearRect(0, 0, 1024, 140);
     // Dark solid backing for maximum contrast against floor
-    ctx.fillStyle = "#111724";
+    ctx.fillStyle = "rgba(14, 20, 32, 0.94)";
     if (ctx.roundRect) ctx.roundRect(4, 10, 1016, 120, 20);
     else ctx.fillRect(4, 10, 1016, 120);
     ctx.fill();
@@ -958,15 +965,15 @@ function addFloorPlate(parent: THREE.Object3D, config: FloorPlateConfig) {
 
     // Solid accent tag on left
     ctx.fillStyle = `#${config.color.toString(16).padStart(6, "0")}`;
-    if (ctx.roundRect) ctx.roundRect(4, 10, 14, 120, [20, 0, 0, 20]);
-    else ctx.fillRect(4, 10, 14, 120);
+    if (ctx.roundRect) ctx.roundRect(4, 10, 16, 120, [20, 0, 0, 20]);
+    else ctx.fillRect(4, 10, 16, 120);
     ctx.fill();
 
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 46px 'Inter', sans-serif";
+    ctx.font = "bold 52px 'Inter', sans-serif";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.fillText(config.label, 36, 70);
+    ctx.fillText(config.label, 42, 70);
   }
   const labelTexture = new THREE.CanvasTexture(labelCanvas);
   labelTexture.minFilter = THREE.LinearFilter;
@@ -977,12 +984,12 @@ function addFloorPlate(parent: THREE.Object3D, config: FloorPlateConfig) {
     depthWrite: false,
   });
   const labelSprite = new THREE.Sprite(labelSpriteMat);
-  const spriteW = Math.min(config.width * 0.58, 145);
+  const spriteW = Math.min(config.width * 0.82, 240);
   const spriteH = spriteW * (140 / 1024);
   labelSprite.scale.set(spriteW, spriteH, 1);
   labelSprite.position.set(
     config.position[0] - config.width / 2 + spriteW / 2 + 10,
-    config.position[1] + spriteH / 2 + 5,
+    config.position[1] + spriteH / 2 + 4,
     config.position[2] - config.depth / 2 + 10
   );
   parent.add(labelSprite);
