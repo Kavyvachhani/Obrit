@@ -166,9 +166,9 @@ export const Graph3D: React.FC = () => {
         hoverLink(null);
         setEdgeTooltip(null);
       })
-      // Link hover & picking interaction
+      // Link hover & picking interaction (subtle flat curvature prevents crossing through billboard cards)
       .linkHoverPrecision(6)
-      .linkCurvature(0.2)
+      .linkCurvature(0.02)
       .onLinkHover((link) => {
         if (!link) {
           hoverLink(null);
@@ -398,8 +398,8 @@ export const Graph3D: React.FC = () => {
     platesGroupRef.current = platesGroup;
     scene.add(platesGroup);
 
-    // ── Initial Camera: High-Elevation Architectural Perspective (Clear, minimal perspective skew) ──
-    fg.cameraPosition({ x: 180, y: 1150, z: 280 }, { x: 180, y: -40, z: 0 }, 1000);
+    // ── Initial Camera: Architectural Perspective (Comfortable distance, bold cards readable immediately) ──
+    fg.cameraPosition({ x: 180, y: 780, z: 220 }, { x: 180, y: -40, z: 0 }, 1000);
 
     // Billboard rotation on camera move
     const updateBillboards = () => {
@@ -709,9 +709,9 @@ export const Graph3D: React.FC = () => {
 
     switch (preset) {
       case "iso":
-        // Clean 70° high-elevation isometric perspective (minimal perspective distortion)
+        // Clean high-elevation isometric perspective (minimal perspective distortion)
         graphRef.current.cameraPosition(
-          { x: centerX + (isBig ? 100 : 40), y: isBig ? 1350 : 1150, z: isBig ? 380 : 280 },
+          { x: centerX + (isBig ? 60 : 30), y: isBig ? 860 : 750, z: isBig ? 240 : 200 },
           { x: centerX, y: centerY, z: centerZ },
           800
         );
@@ -719,7 +719,7 @@ export const Graph3D: React.FC = () => {
       case "top":
         // 90-degree blueprint plan view (flat, ultra-clear)
         graphRef.current.cameraPosition(
-          { x: centerX, y: isBig ? 1450 : 1250, z: 0.1 },
+          { x: centerX, y: isBig ? 960 : 820, z: 0.1 },
           { x: centerX, y: centerY, z: centerZ },
           800
         );
@@ -727,13 +727,13 @@ export const Graph3D: React.FC = () => {
       case "elevation":
         // Front elevation architectural slice
         graphRef.current.cameraPosition(
-          { x: centerX, y: 40, z: isBig ? 1400 : 950 },
+          { x: centerX, y: 30, z: isBig ? 900 : 720 },
           { x: centerX, y: centerY, z: centerZ },
           1000
         );
         break;
       case "fit":
-        graphRef.current.zoomToFit(1000, 80);
+        graphRef.current.zoomToFit(1000, 70);
         break;
     }
   };

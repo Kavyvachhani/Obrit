@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useGraphStore } from "../../stores/graph-store.js";
 import { useAccountStore } from "../../stores/account-store.js";
 import { triggerScan, fetchGraph } from "../../lib/api.js";
-import { DEFAULT_AWS_TOPOLOGY } from "../../lib/architecture-data.js";
+import { DEFAULT_AWS_TOPOLOGY, ENTERPRISE_AWS_TOPOLOGY } from "../../lib/architecture-data.js";
 import { auditGraphFaultTolerance } from "../../lib/fault-tolerance.js";
 import {
   Search,
@@ -277,31 +277,60 @@ export const Navbar: React.FC = () => {
                   <div className="text-[10px] uppercase font-mono tracking-wider text-[#8893A6] mb-1.5">
                     Reference Architecture
                   </div>
-                  <button
-                    onClick={() => {
-                      setActiveAccountId("demo");
-                      setGraphData(DEFAULT_AWS_TOPOLOGY);
-                      setIsProfileOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between p-2 rounded-lg border transition-all ${
-                      isDemoActive
-                        ? "bg-[#262D3A] border-[#4DA3FF]"
-                        : "bg-[#0B0E14] border-[#262D3A] hover:border-[#8893A6]/40"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 text-left">
-                      <Box className="w-4 h-4 text-indigo-400 shrink-0" />
-                      <div>
-                        <div className="text-xs font-semibold text-[#E6E9EF] flex items-center gap-1.5">
-                          Multi-AZ Production Stack
-                          {isDemoActive && <Check className="w-3.5 h-3.5 text-[#3DDC84]" />}
-                        </div>
-                        <div className="text-[10px] font-mono text-[#8893A6]">
-                          us-east-1 • 12 Resources • Multi-AZ
+                  <div className="space-y-1.5">
+                    <button
+                      onClick={() => {
+                        setActiveAccountId("demo");
+                        setGraphData(DEFAULT_AWS_TOPOLOGY);
+                        setIsProfileOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between p-2 rounded-lg border transition-all ${
+                        isDemoActive && nodes.length <= 15
+                          ? "bg-[#262D3A] border-[#4DA3FF]"
+                          : "bg-[#0B0E14] border-[#262D3A] hover:border-[#8893A6]/40"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-left">
+                        <Box className="w-4 h-4 text-indigo-400 shrink-0" />
+                        <div>
+                          <div className="text-xs font-semibold text-[#E6E9EF] flex items-center gap-1.5">
+                            Multi-AZ Production Stack
+                            {isDemoActive && nodes.length <= 15 && <Check className="w-3.5 h-3.5 text-[#3DDC84]" />}
+                          </div>
+                          <div className="text-[10px] font-mono text-[#8893A6]">
+                            us-east-1 • 12 Resources • Core Multi-AZ
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveAccountId("demo");
+                        setGraphData(ENTERPRISE_AWS_TOPOLOGY);
+                        setUnplannedServices([]);
+                        setIsProfileOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between p-2 rounded-lg border transition-all ${
+                        isDemoActive && nodes.length > 15
+                          ? "bg-[#262D3A] border-[#4DA3FF]"
+                          : "bg-[#0B0E14] border-[#262D3A] hover:border-[#8893A6]/40"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-left">
+                        <Server className="w-4 h-4 text-cyan-400 shrink-0" />
+                        <div>
+                          <div className="text-xs font-semibold text-[#E6E9EF] flex items-center gap-1.5">
+                            Enterprise Cloud Fabric
+                            {isDemoActive && nodes.length > 15 && <Check className="w-3.5 h-3.5 text-[#3DDC84]" />}
+                          </div>
+                          <div className="text-[10px] font-mono text-[#8893A6]">
+                            us-east-1 • 24 Resources • DynamoDB, SQS, CloudFront
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="h-px bg-[#262D3A]" />
@@ -591,10 +620,19 @@ export const Navbar: React.FC = () => {
 
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={handleRefresh}
+              onClick={() => {
+                setScanning(true);
+                setTimeout(() => {
+                  setGraphData(ENTERPRISE_AWS_TOPOLOGY);
+                  setUnplannedServices([]);
+                  setScanning(false);
+                  setLastScannedAt(new Date().toLocaleTimeString());
+                  window.dispatchEvent(new CustomEvent("orbit:reset-camera"));
+                }, 400);
+              }}
               disabled={isScanning}
               className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#F2B33D]/20 to-[#FF9900]/20 hover:from-[#F2B33D]/30 hover:to-[#FF9900]/30 border border-[#F2B33D]/50 text-[#F2B33D] font-semibold text-[11px] transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
-              title="Add detected services to scan pipeline"
+              title="Add DynamoDB, SQS, CloudFront to active architecture graph"
             >
               <RotateCcw className={`w-3 h-3 ${isScanning ? "animate-spin" : ""}`} />
               <span>Add to next scan</span>

@@ -459,6 +459,157 @@ export function drawOfficialAwsVectorIcon(
       break;
     }
 
+    case "dynamodb": {
+      // AWS DynamoDB: 3 stacked database wafers with key lightning
+      const dw = 24 * u;
+      const dh = 5 * u;
+      for (let i = -1; i <= 1; i++) {
+        const dy = cy + i * 8 * u;
+        ctx.beginPath();
+        ctx.ellipse(cx, dy, dw / 2, dh / 2, 0, 0, Math.PI * 2);
+        ctx.fillStyle = i === 0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)";
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
+      }
+      // Vertical cylinder sides
+      ctx.beginPath();
+      ctx.moveTo(cx - dw / 2, cy - 8 * u);
+      ctx.lineTo(cx - dw / 2, cy + 8 * u);
+      ctx.moveTo(cx + dw / 2, cy - 8 * u);
+      ctx.lineTo(cx + dw / 2, cy + 8 * u);
+      ctx.stroke();
+      // Little lightning bolt in front
+      ctx.fillStyle = "#F2B33D";
+      ctx.beginPath();
+      ctx.moveTo(cx + 2 * u, cy - 5 * u);
+      ctx.lineTo(cx - 3 * u, cy + 1 * u);
+      ctx.lineTo(cx + 1 * u, cy + 1 * u);
+      ctx.lineTo(cx - 1 * u, cy + 6 * u);
+      ctx.lineTo(cx + 4 * u, cy - 1 * u);
+      ctx.lineTo(cx, cy - 1 * u);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+
+    case "sqs": {
+      // AWS SQS: Message queue layers with forward dispatch arrow
+      const qw = 22 * u;
+      const qh = 6 * u;
+      // 3 Queue message slabs
+      for (let i = -1; i <= 1; i++) {
+        const qy = cy + i * 7 * u;
+        ctx.fillStyle = "rgba(255,255,255,0.18)";
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(cx - qw / 2, qy - qh / 2, qw, qh, 2 * u);
+        else ctx.rect(cx - qw / 2, qy - qh / 2, qw, qh);
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
+      }
+      // Right arrow
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(cx + qw / 2 + 3 * u, cy);
+      ctx.lineTo(cx + qw / 2 - 1 * u, cy - 4 * u);
+      ctx.lineTo(cx + qw / 2 - 1 * u, cy + 4 * u);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+
+    case "cloudfront": {
+      // AWS CloudFront: Global CDN globe with edge caching rays
+      ctx.beginPath();
+      ctx.arc(cx, cy, 11 * u, 0, Math.PI * 2);
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+      // Latitude / Longitude arcs
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 4 * u, 11 * u, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx - 11 * u, cy);
+      ctx.lineTo(cx + 11 * u, cy);
+      ctx.stroke();
+      // 4 Edge points around globe
+      const angles = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
+      ctx.fillStyle = "#38BDF8";
+      for (const a of angles) {
+        const px = cx + Math.cos(a) * 15 * u;
+        const py = cy + Math.sin(a) * 15 * u;
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5 * u, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+
+    case "apigateway": {
+      // AWS API Gateway: Portal arch with API bracket tags
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2 * u;
+      // Arch
+      ctx.beginPath();
+      ctx.arc(cx, cy - 2 * u, 10 * u, Math.PI, 0);
+      ctx.lineTo(cx + 10 * u, cy + 12 * u);
+      ctx.moveTo(cx - 10 * u, cy - 2 * u);
+      ctx.lineTo(cx - 10 * u, cy + 12 * u);
+      ctx.stroke();
+      // Inner brackets < >
+      ctx.fillStyle = "#38BDF8";
+      ctx.font = `bold ${8 * u}px monospace`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("{/}", cx, cy + 3 * u);
+      break;
+    }
+
+    case "sns": {
+      // AWS SNS: Notification bell / broadcast horn
+      ctx.beginPath();
+      ctx.arc(cx, cy - 4 * u, 6 * u, Math.PI, 0);
+      ctx.lineTo(cx + 10 * u, cy + 7 * u);
+      ctx.lineTo(cx - 10 * u, cy + 7 * u);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(255,255,255,0.2)";
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+      // Clapper
+      ctx.beginPath();
+      ctx.arc(cx, cy + 9 * u, 2.5 * u, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      // Broadcast arcs
+      ctx.beginPath();
+      ctx.arc(cx, cy - 3 * u, 13 * u, -Math.PI * 0.8, -Math.PI * 0.2);
+      ctx.stroke();
+      break;
+    }
+
+    case "ecs": {
+      // AWS ECS: Container cube stack
+      const cw = 16 * u;
+      const ch = 16 * u;
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(cx - cw / 2, cy - ch / 2, cw, ch, 3 * u);
+      else ctx.rect(cx - cw / 2, cy - ch / 2, cw, ch);
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+      // Inner grid cubes
+      ctx.beginPath();
+      ctx.moveTo(cx - cw / 2, cy);
+      ctx.lineTo(cx + cw / 2, cy);
+      ctx.moveTo(cx, cy - ch / 2);
+      ctx.lineTo(cx, cy + ch / 2);
+      ctx.stroke();
+      break;
+    }
+
     default: {
       // Generic AWS resource box
       ctx.strokeStyle = "#ffffff";
@@ -1036,7 +1187,7 @@ function build3DLabelSprite(
     const textLeft = iconX + iconSize + 26;
 
     // Service category tag
-    ctx.font = "bold 28px 'Inter', sans-serif";
+    ctx.font = "bold 32px 'Inter', sans-serif";
     ctx.fillStyle = isIncomplete ? "#94A3B8" : (isCluster ? "#38BDF8" : style.color);
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
@@ -1045,17 +1196,17 @@ function build3DLabelSprite(
       : isIncomplete
       ? `${style.shortType} • DATA GAP`
       : `${style.shortType.toUpperCase()}`;
-    ctx.fillText(tagText, textLeft, pad + 24);
+    ctx.fillText(tagText, textLeft, pad + 22);
 
     // Resource Name (Large, bold, high-contrast white text)
-    ctx.font = "bold 50px 'Inter', -apple-system, sans-serif";
+    ctx.font = "bold 58px 'Inter', -apple-system, sans-serif";
     ctx.fillStyle = "#FFFFFF";
     let displayName = node.name || node.id;
     if (displayName.length > 22) displayName = displayName.slice(0, 21) + "…";
-    ctx.fillText(displayName, textLeft, pad + 62);
+    ctx.fillText(displayName, textLeft, pad + 60);
 
     // Humanized detail subtitle
-    ctx.font = "bold 26px 'JetBrains Mono', monospace";
+    ctx.font = "bold 30px 'JetBrains Mono', monospace";
     ctx.fillStyle = isIncomplete ? "#CBD5E1" : "#A0AEC0";
     let detail = node.region || "us-east-1";
     if (isCluster) {
@@ -1072,7 +1223,7 @@ function build3DLabelSprite(
     } else if (node.rawConfig && (node.rawConfig as any).CidrBlock) {
       detail = `${(node.rawConfig as any).CidrBlock}`;
     }
-    ctx.fillText(detail, textLeft, pad + 122);
+    ctx.fillText(detail, textLeft, pad + 124);
 
     // Right-hand Status Pill Badge
     const badgeW = 160;
@@ -1097,7 +1248,7 @@ function build3DLabelSprite(
     ctx.fill();
 
     // Status text
-    ctx.font = "bold 22px 'JetBrains Mono', monospace";
+    ctx.font = "bold 26px 'JetBrains Mono', monospace";
     ctx.fillStyle = statusColor;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -1118,10 +1269,10 @@ function build3DLabelSprite(
 
   // Humanized, high-legibility scale matching architectural schematics
   const sprite = new THREE.Sprite(spriteMat);
-  const scaleW = isCluster ? 230 : 205;
+  const scaleW = isCluster ? 280 : 250;
   const scaleH = scaleW * (260 / (isCluster ? 1080 : 1000));
   sprite.scale.set(scaleW, scaleH, 1);
-  sprite.position.y = 52; // Positioned cleanly above figurine
+  sprite.position.y = 56; // Positioned cleanly above figurine
   sprite.userData = { isBillboardCard: true, nodeId: node.id };
 
   return sprite;

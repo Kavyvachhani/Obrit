@@ -47,7 +47,9 @@ export function applyStructuredArchitectureLayout(
 } {
   // Deterministic positions for official AWS reference architecture
   const nodeMap: Record<string, { x: number; y: number; z: number; tier: number; az?: any }> = {
-    // ── Edge & Ingress Platform (x: -730 to -470) ──
+    // ── Edge & Ingress Platform ──
+    "cf-prod-global-edge-cdn": { x: -840, y: -90, z: -90, tier: 0, az: "ingress" },
+    "apigw-prod-public-rest-api": { x: -840, y: 90, z: 90, tier: 0, az: "ingress" },
     "igw-0998877665544332": { x: -600, y: -90, z: -90, tier: 0, az: "ingress" },
     "sg-edge-alb": { x: -600, y: 90, z: 90, tier: 0, az: "ingress" },
 
@@ -57,20 +59,30 @@ export function applyStructuredArchitectureLayout(
     "sg-internal-app": { x: 30, y: -160, z: -160, tier: 2, az: "vpc" },
     "tg-production-api": { x: 30, y: 160, z: 160, tier: 1, az: "vpc" },
 
-    // ── Private App Tier (Staggered 2x2 grid for zero horizontal overlap) ──
-    "i-091a2b3c4d5e6f701": { x: 320, y: -215, z: -200, tier: 2, az: "us-east-1a" },
-    "func-prod-auth-token-validator": { x: 320, y: -95, z: -85, tier: 2, az: "us-east-1a" },
-    "i-091a2b3c4d5e6f702": { x: 320, y: 95, z: 85, tier: 2, az: "us-east-1b" },
-    "i-0demo1d1accessdenied": { x: 320, y: 215, z: 200, tier: 2, az: "us-east-1b" },
+    // ── Private App Tier (AZ-1a and AZ-1b) ──
+    "i-091a2b3c4d5e6f701": { x: 320, y: -230, z: -210, tier: 2, az: "us-east-1a" },
+    "func-prod-auth-token-validator": { x: 320, y: -110, z: -100, tier: 2, az: "us-east-1a" },
+    "i-091a2b3c4d5e6f703": { x: 320, y: 10, z: 10, tier: 2, az: "us-east-1a" },
+    "ecs-prod-order-processor": { x: 320, y: 120, z: 110, tier: 2, az: "us-east-1b" },
+    "i-091a2b3c4d5e6f702": { x: 320, y: 230, z: 210, tier: 2, az: "us-east-1b" },
+    "i-0demo1d1accessdenied": { x: 320, y: 340, z: 310, tier: 2, az: "us-east-1b" },
 
     // ── Database Tier ──
     "db-prod-aurora-pg-primary": { x: 610, y: -160, z: -160, tier: 3, az: "us-east-1a" },
+    "db-prod-aurora-pg-replica-1b": { x: 610, y: 160, z: 160, tier: 3, az: "us-east-1b" },
 
-    // ── Account-level / Global Services Platform (x: 770 to 1030) ──
-    "s3-prod-static-distribution-cdn": { x: 900, y: -225, z: -200, tier: 4, az: "regional" },
-    "s3-prod-telemetry-data-lake": { x: 900, y: -75, z: -70, tier: 4, az: "regional" },
-    "func-prod-event-pipeline-consumer": { x: 900, y: 75, z: 70, tier: 4, az: "regional" },
-    "role-ec2-ssm-s3-access": { x: 900, y: 225, z: 200, tier: 4, az: "regional" },
+    // ── Distributed Storage & Messaging Platform (DynamoDB & SQS) ──
+    "dynamodb-prod-user-sessions": { x: 880, y: -230, z: -210, tier: 4, az: "regional" },
+    "dynamodb-prod-orders-lake": { x: 880, y: -100, z: -90, tier: 4, az: "regional" },
+    "sqs-prod-event-bus-fifo": { x: 880, y: 60, z: 50, tier: 4, az: "regional" },
+    "sqs-prod-order-events-dlq": { x: 880, y: 210, z: 190, tier: 4, az: "regional" },
+
+    // ── Regional Platform (S3, Lambda, IAM, SNS) ──
+    "sns-prod-security-alerts": { x: 1160, y: -230, z: -210, tier: 4, az: "regional" },
+    "s3-prod-static-distribution-cdn": { x: 1160, y: -100, z: -90, tier: 4, az: "regional" },
+    "s3-prod-telemetry-data-lake": { x: 1160, y: 40, z: 40, tier: 4, az: "regional" },
+    "func-prod-event-pipeline-consumer": { x: 1160, y: 180, z: 160, tier: 4, az: "regional" },
+    "role-ec2-ssm-s3-access": { x: 1160, y: 310, z: 280, tier: 4, az: "regional" },
   };
 
   const positionedNodes: PositionedNode[] = [];
@@ -82,8 +94,9 @@ export function applyStructuredArchitectureLayout(
 
   // Check if we are running in demo mode (preset IDs present)
   const isDemo = resourceNodes.some((n) => nodeMap[n.id]);
+  const isEnterprise = resourceNodes.length > 15;
 
-  if (isDemo && resourceNodes.length <= 15) {
+  if (isDemo && resourceNodes.length <= 26) {
     // ── Clean Textbook Demo Architecture Layout ──
     for (const node of resourceNodes) {
       const preset = nodeMap[node.id];
@@ -112,7 +125,7 @@ export function applyStructuredArchitectureLayout(
           id: "platform-ingress-edge",
           name: "Internet & Edge Ingress",
           type: "ingress",
-          x1: -730,
+          x1: isEnterprise ? -960 : -730,
           y1: -310,
           x2: -470,
           y2: 310,
@@ -128,7 +141,7 @@ export function applyStructuredArchitectureLayout(
           x1: -410,
           y1: -330,
           x2: 740,
-          y2: 330,
+          y2: isEnterprise ? 420 : 330,
           z: 0,
         },
       ],
@@ -152,7 +165,7 @@ export function applyStructuredArchitectureLayout(
           x1: -395,
           y1: 25,
           x2: 725,
-          y2: 310,
+          y2: isEnterprise ? 400 : 310,
           z: 160,
         },
       ],
@@ -202,7 +215,7 @@ export function applyStructuredArchitectureLayout(
           x1: -380,
           y1: 45,
           x2: -150,
-          y2: 290,
+          y2: isEnterprise ? 380 : 290,
           z: 160,
         },
         {
@@ -214,7 +227,7 @@ export function applyStructuredArchitectureLayout(
           x1: -90,
           y1: 45,
           x2: 450,
-          y2: 290,
+          y2: isEnterprise ? 380 : 290,
           z: 160,
         },
         {
@@ -226,22 +239,45 @@ export function applyStructuredArchitectureLayout(
           x1: 490,
           y1: 45,
           x2: 710,
-          y2: 290,
+          y2: isEnterprise ? 380 : 290,
           z: 160,
         },
       ],
-      regionalBounds: [
-        {
-          id: "regional-services",
-          name: "Account-level / Global Services",
-          type: "regional",
-          x1: 770,
-          y1: -330,
-          x2: 1030,
-          y2: 330,
-          z: 0,
-        },
-      ],
+      regionalBounds: isEnterprise
+        ? [
+            {
+              id: "regional-messaging",
+              name: "Messaging & Event Bus (SQS, DynamoDB)",
+              type: "regional",
+              x1: 760,
+              y1: -330,
+              x2: 1010,
+              y2: 380,
+              z: 0,
+            },
+            {
+              id: "regional-services",
+              name: "Regional & Storage Fabric (S3, SNS, IAM)",
+              type: "regional",
+              x1: 1040,
+              y1: -330,
+              x2: 1290,
+              y2: 380,
+              z: 0,
+            },
+          ]
+        : [
+            {
+              id: "regional-services",
+              name: "Account-level / Global Services",
+              type: "regional",
+              x1: 770,
+              y1: -330,
+              x2: 1030,
+              y2: 330,
+              z: 0,
+            },
+          ],
     };
   }
 

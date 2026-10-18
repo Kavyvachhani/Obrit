@@ -560,3 +560,246 @@ export const DEFAULT_AWS_TOPOLOGY: GraphData = {
     },
   ],
 };
+
+/**
+ * Enterprise AWS Multi-AZ Fabric (High-Scale Topology)
+ * Visualizes 25 comprehensive services including DynamoDB, SQS, CloudFront, ECS, API Gateway, SNS, and Multi-AZ DB Replicas.
+ */
+export const ENTERPRISE_AWS_TOPOLOGY: GraphData = {
+  nodes: [
+    ...DEFAULT_AWS_TOPOLOGY.nodes,
+
+    // ─── EDGE CDN & API GATEWAY ─────────────────────────────────────────────
+    {
+      id: "cf-prod-global-edge-cdn",
+      provider: "aws",
+      accountId: "123456789012",
+      region: "global",
+      type: "cloudfront:distribution",
+      arn: "arn:aws:cloudfront::123456789012:distribution/E2M3N4OP5Q6R7S",
+      name: "prod-global-cdn.cloudfront.net",
+      tags: { Environment: "production", Tier: "EdgeCDN", Security: "AWS-WAF-v2" },
+      rawConfig: {
+        DomainName: "d111111abcdef8.cloudfront.net",
+        Status: "Deployed",
+        Origins: ["prod-static-distribution-cdn.s3.amazonaws.com", "prod-edge-alb.elb.amazonaws.com"],
+        PriceClass: "PriceClass_All",
+        HttpVersion: "http2and3",
+      },
+      status: "healthy",
+      lastSeenAt: new Date().toISOString(),
+    },
+    {
+      id: "apigw-prod-public-rest-api",
+      provider: "aws",
+      accountId: "123456789012",
+      region: "us-east-1",
+      type: "apigateway:rest-api",
+      arn: "arn:aws:apigateway:us-east-1::/restapis/agw-prod-core-99",
+      name: "api-gateway-core (REST API)",
+      tags: { Environment: "production", Protocol: "HTTPS", Throttling: "10000rps" },
+      rawConfig: {
+        ApiId: "agw-prod-core-99",
+        Name: "prod-core-api",
+        EndpointConfiguration: { Types: ["EDGE"] },
+        MinimumCompressionSize: 1024,
+      },
+      status: "healthy",
+      lastSeenAt: new Date().toISOString(),
+    },
+
+    // ─── MULTI-AZ REPLICA & COMPUTE EXPANSION ───────────────────────────────
+    {
+      id: "db-prod-aurora-pg-replica-1b",
+      provider: "aws",
+      accountId: "123456789012",
+      region: "us-east-1",
+      type: "rds:db-instance",
+      arn: "arn:aws:rds:us-east-1:123456789012:db:prod-aurora-pg-replica-1b",
+      name: "aurora-pg-cluster-replica (AZ-1b)",
+      tags: { Engine: "aurora-postgresql", Role: "ReadReplica", MultiAZ: "true" },
+      rawConfig: {
+        DBInstanceIdentifier: "prod-aurora-pg-replica-1b",
+        Engine: "aurora-postgresql",
+        DBInstanceClass: "db.r6g.4xlarge",
+        Status: "available",
+        VpcId: "vpc-0a8b9c1d2e3f4001",
+        SubnetId: "subnet-06db1b",
+        MultiAZ: true,
+      },
+      status: "healthy",
+      lastSeenAt: new Date().toISOString(),
+      group: "vpc-0a8b9c1d2e3f4001",
+      subGroup: "subnet-06db1b",
+    },
+    {
+      id: "ecs-prod-order-processor",
+      provider: "aws",
+      accountId: "123456789012",
+      region: "us-east-1",
+      type: "ecs:service",
+      arn: "arn:aws:ecs:us-east-1:123456789012:service/prod-cluster/order-processor",
+      name: "ecs-order-processor-service",
+      tags: { LaunchType: "FARGATE", Environment: "production", Tier: "App" },
+      rawConfig: {
+        ServiceName: "order-processor",
+        DesiredCount: 4,
+        RunningCount: 4,
+        LaunchType: "FARGATE",
+        SubnetIds: ["subnet-04private1b"],
+      },
+      status: "healthy",
+      lastSeenAt: new Date().toISOString(),
+      group: "vpc-0a8b9c1d2e3f4001",
+      subGroup: "subnet-04private1b",
+    },
+    {
+      id: "i-091a2b3c4d5e6f703",
+      provider: "aws",
+      accountId: "123456789012",
+      region: "us-east-1",
+      type: "ec2:instance",
+      arn: "arn:aws:ec2:us-east-1:123456789012:instance/i-091a2b3c4d5e6f703",
+      name: "api-backend-worker-2a",
+      tags: { Name: "api-backend-worker-2a", Role: "CoreAPI", Environment: "production" },
+      rawConfig: {
+        InstanceId: "i-091a2b3c4d5e6f703",
+        InstanceType: "c6i.2xlarge",
+        State: { Name: "running" },
+        PrivateIpAddress: "10.0.10.43",
+        VpcId: "vpc-0a8b9c1d2e3f4001",
+        SubnetId: "subnet-03private1a",
+      },
+      status: "healthy",
+      lastSeenAt: new Date().toISOString(),
+      group: "vpc-0a8b9c1d2e3f4001",
+      subGroup: "subnet-03private1a",
+    },
+
+    // ─── NOSQL DATABASE TIER (DYNAMODB) ─────────────────────────────────────
+    {
+      id: "dynamodb-prod-user-sessions",
+      provider: "aws",
+      accountId: "123456789012",
+      region: "us-east-1",
+      type: "dynamodb:table",
+      arn: "arn:aws:dynamodb:us-east-1:123456789012:table/prod-user-sessions",
+      name: "dynamo-user-sessions",
+      tags: { Environment: "production", Tier: "NoSQL", Role: "SessionStore" },
+      rawConfig: {
+        TableName: "prod-user-sessions",
+        BillingMode: "PAY_PER_REQUEST",
+        ItemCount: 1420500,
+        TableSizeBytes: 89400200,
+        StreamSpecification: { StreamEnabled: true, StreamViewType: "NEW_AND_OLD_IMAGES" },
+      },
+      status: "healthy",
+      lastSeenAt: new Date().toISOString(),
+    },
+    {
+      id: "dynamodb-prod-orders-lake",
+      provider: "aws",
+      accountId: "123456789012",
+      region: "us-east-1",
+      type: "dynamodb:table",
+      arn: "arn:aws:dynamodb:us-east-1:123456789012:table/prod-orders-ledger",
+      name: "dynamo-orders-ledger",
+      tags: { Environment: "production", Tier: "Ledger", Compliance: "PCI-DSS" },
+      rawConfig: {
+        TableName: "prod-orders-ledger",
+        BillingMode: "PAY_PER_REQUEST",
+        ItemCount: 4589000,
+        PointInTimeRecovery: "ENABLED",
+      },
+      status: "healthy",
+      lastSeenAt: new Date().toISOString(),
+    },
+
+    // ─── ASYNCHRONOUS MESSAGING & EVENT FABRIC (SQS & SNS) ──────────────────
+    {
+      id: "sqs-prod-event-bus-fifo",
+      provider: "aws",
+      accountId: "123456789012",
+      region: "us-east-1",
+      type: "sqs:queue",
+      arn: "arn:aws:sqs:us-east-1:123456789012:order-events.fifo",
+      name: "sqs-event-bus.fifo",
+      tags: { Type: "FIFO", Tier: "MessageBus", Environment: "production" },
+      rawConfig: {
+        QueueUrl: "https://sqs.us-east-1.amazonaws.com/123456789012/order-events.fifo",
+        FifoQueue: true,
+        ContentBasedDeduplication: true,
+        VisibilityTimeout: 30,
+        MessageRetentionPeriod: 1209600,
+      },
+      status: "healthy",
+      lastSeenAt: new Date().toISOString(),
+    },
+    {
+      id: "sqs-prod-order-events-dlq",
+      provider: "aws",
+      accountId: "123456789012",
+      region: "us-east-1",
+      type: "sqs:queue",
+      arn: "arn:aws:sqs:us-east-1:123456789012:order-events-dlq",
+      name: "sqs-order-events-dlq",
+      tags: { Role: "DeadLetterQueue", Tier: "MessageBus" },
+      rawConfig: {
+        QueueUrl: "https://sqs.us-east-1.amazonaws.com/123456789012/order-events-dlq",
+        ApproximateNumberOfMessages: 14,
+        RetentionPeriod: 1209600,
+      },
+      status: "exposed",
+      lastSeenAt: new Date().toISOString(),
+    },
+    {
+      id: "sns-prod-security-alerts",
+      provider: "aws",
+      accountId: "123456789012",
+      region: "us-east-1",
+      type: "sns:topic",
+      arn: "arn:aws:sns:us-east-1:123456789012:prod-security-alerts",
+      name: "sns-security-alerts-topic",
+      tags: { Tier: "Alerting", Priority: "Critical" },
+      rawConfig: {
+        TopicArn: "arn:aws:sns:us-east-1:123456789012:prod-security-alerts",
+        SubscriptionsConfirmed: 8,
+        KmsMasterKeyId: "alias/aws/sns",
+      },
+      status: "healthy",
+      lastSeenAt: new Date().toISOString(),
+    },
+  ],
+  links: [
+    ...DEFAULT_AWS_TOPOLOGY.links,
+
+    // CloudFront to Origins
+    { id: "l-cf-s3", sourceResourceId: "cf-prod-global-edge-cdn", targetResourceId: "s3-prod-static-distribution-cdn", relationshipType: "routes-to", source: "cf-prod-global-edge-cdn", target: "s3-prod-static-distribution-cdn" },
+    { id: "l-cf-alb", sourceResourceId: "cf-prod-global-edge-cdn", targetResourceId: "alb-production-edge", relationshipType: "routes-to", source: "cf-prod-global-edge-cdn", target: "alb-production-edge" },
+
+    // API Gateway routing
+    { id: "l-apigw-lambda", sourceResourceId: "apigw-prod-public-rest-api", targetResourceId: "func-prod-auth-token-validator", relationshipType: "targets", source: "apigw-prod-public-rest-api", target: "func-prod-auth-token-validator" },
+    { id: "l-apigw-alb", sourceResourceId: "apigw-prod-public-rest-api", targetResourceId: "alb-production-edge", relationshipType: "routes-to", source: "apigw-prod-public-rest-api", target: "alb-production-edge" },
+
+    // Lambda to DynamoDB Session Store
+    { id: "l-lambda-dynamo", sourceResourceId: "func-prod-auth-token-validator", targetResourceId: "dynamodb-prod-user-sessions", relationshipType: "routes-to", source: "func-prod-auth-token-validator", target: "dynamodb-prod-user-sessions" },
+
+    // Compute to SQS Event Bus
+    { id: "l-ec2-sqs", sourceResourceId: "i-091a2b3c4d5e6f701", targetResourceId: "sqs-prod-event-bus-fifo", relationshipType: "routes-to", source: "i-091a2b3c4d5e6f701", target: "sqs-prod-event-bus-fifo" },
+    { id: "l-ec2-sqs-1b", sourceResourceId: "i-091a2b3c4d5e6f702", targetResourceId: "sqs-prod-event-bus-fifo", relationshipType: "routes-to", source: "i-091a2b3c4d5e6f702", target: "sqs-prod-event-bus-fifo" },
+
+    // SQS to DLQ & Consumer
+    { id: "l-sqs-dlq", sourceResourceId: "sqs-prod-event-bus-fifo", targetResourceId: "sqs-prod-order-events-dlq", relationshipType: "routes-to", source: "sqs-prod-event-bus-fifo", target: "sqs-prod-order-events-dlq" },
+    { id: "l-sqs-lambda", sourceResourceId: "sqs-prod-event-bus-fifo", targetResourceId: "func-prod-event-pipeline-consumer", relationshipType: "routes-to", source: "sqs-prod-event-bus-fifo", target: "func-prod-event-pipeline-consumer" },
+
+    // Consumer Lambda to DynamoDB Ledger & SNS Alerts
+    { id: "l-lambda-dynamo-orders", sourceResourceId: "func-prod-event-pipeline-consumer", targetResourceId: "dynamodb-prod-orders-lake", relationshipType: "routes-to", source: "func-prod-event-pipeline-consumer", target: "dynamodb-prod-orders-lake" },
+    { id: "l-lambda-sns", sourceResourceId: "func-prod-event-pipeline-consumer", targetResourceId: "sns-prod-security-alerts", relationshipType: "routes-to", source: "func-prod-event-pipeline-consumer", target: "sns-prod-security-alerts" },
+
+    // Read Replica DB & ECS
+    { id: "l-ec2-rds-replica", sourceResourceId: "i-091a2b3c4d5e6f702", targetResourceId: "db-prod-aurora-pg-replica-1b", relationshipType: "routes-to", source: "i-091a2b3c4d5e6f702", target: "db-prod-aurora-pg-replica-1b" },
+    { id: "l-ecs-rds", sourceResourceId: "ecs-prod-order-processor", targetResourceId: "db-prod-aurora-pg-primary", relationshipType: "routes-to", source: "ecs-prod-order-processor", target: "db-prod-aurora-pg-primary" },
+    { id: "l-tg-ecs", sourceResourceId: "tg-production-api", targetResourceId: "ecs-prod-order-processor", relationshipType: "targets", source: "tg-production-api", target: "ecs-prod-order-processor" },
+    { id: "l-tg-ec2-2a", sourceResourceId: "tg-production-api", targetResourceId: "i-091a2b3c4d5e6f703", relationshipType: "targets", source: "tg-production-api", target: "i-091a2b3c4d5e6f703" },
+  ],
+};
