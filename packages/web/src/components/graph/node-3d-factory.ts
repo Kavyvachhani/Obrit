@@ -1118,10 +1118,10 @@ function build3DLabelSprite(
 
   // Humanized, high-legibility scale matching architectural schematics
   const sprite = new THREE.Sprite(spriteMat);
-  const scaleW = isCluster ? 150 : 125;
+  const scaleW = isCluster ? 180 : 160;
   const scaleH = scaleW * (260 / (isCluster ? 1080 : 1000));
   sprite.scale.set(scaleW, scaleH, 1);
-  sprite.position.y = 42; // Positioned cleanly above figurine
+  sprite.position.y = 48; // Positioned cleanly above figurine
   sprite.userData = { isBillboardCard: true, nodeId: node.id };
 
   return sprite;

@@ -338,16 +338,20 @@ export const Navbar: React.FC = () => {
 
         {/* Right: Scan Gap Badge + Layers ▾ + Settings ⚙ */}
         <div className="flex items-center gap-2">
-          {/* Scan-gap badge (connected to visual dashed markers) */}
+          {/* Scan-gap badge (selects and inspects the incomplete node without hiding the network) */}
           {incompleteCount > 0 && (
             <button
               onClick={() => {
-                setFilterCategory("incomplete");
                 const firstIncomplete = nodes.find((n) => n.status === "incomplete");
-                if (firstIncomplete) selectNode(firstIncomplete);
+                if (firstIncomplete) {
+                  selectNode(firstIncomplete);
+                  window.dispatchEvent(
+                    new CustomEvent("orbit:focus-node", { detail: { id: firstIncomplete.id } })
+                  );
+                }
               }}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#151A24] hover:bg-[#262D3A]/60 border border-dashed border-[#8893A6] text-[#E6E9EF] transition-all text-xs font-mono cursor-pointer"
-              title="Click to view tool-side scan gaps (incomplete describe responses)"
+              title="Click to locate and inspect tool-side scan gaps (incomplete describe responses)"
             >
               <AlertTriangle className="w-3.5 h-3.5 text-[#8893A6]" />
               <span className="text-[11px] font-medium">

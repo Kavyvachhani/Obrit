@@ -398,8 +398,8 @@ export const Graph3D: React.FC = () => {
     platesGroupRef.current = platesGroup;
     scene.add(platesGroup);
 
-    // ── Initial Camera: Clean Elevated 45° Perspective (Zero foreshortening, crystal clear) ──
-    fg.cameraPosition({ x: 180, y: 760, z: 580 }, { x: 120, y: -40, z: 0 }, 1000);
+    // ── Initial Camera: High-Elevation Architectural Perspective (Clear, minimal perspective skew) ──
+    fg.cameraPosition({ x: 180, y: 1150, z: 280 }, { x: 180, y: -40, z: 0 }, 1000);
 
     // Billboard rotation on camera move
     const updateBillboards = () => {
@@ -418,7 +418,7 @@ export const Graph3D: React.FC = () => {
       if (controls) {
         // Enforce architectural boundaries: strictly prevent viewing below ground or flipping upside-down!
         controls.maxPolarAngle = Math.PI / 2.22; // ~81° - prevents camera sinking below floor plane
-        controls.minPolarAngle = Math.PI / 8;    // ~22.5° - prevents zenith gimbal lock while allowing top view
+        controls.minPolarAngle = 0;             // Allow complete clean top-down plan view
         controls.enableRotate = false;           // ROTATION LOCKED BY DEFAULT for stable map readability
         controls.enableDamping = true;
         controls.dampingFactor = 0.12;
@@ -709,19 +709,19 @@ export const Graph3D: React.FC = () => {
 
     switch (preset) {
       case "iso":
-        // 45° elevation perspective
+        // Clean 70° high-elevation isometric perspective (minimal perspective distortion)
         graphRef.current.cameraPosition(
-          { x: centerX + (isBig ? 120 : 60), y: isBig ? 960 : 760, z: isBig ? 760 : 580 },
+          { x: centerX + (isBig ? 100 : 40), y: isBig ? 1350 : 1150, z: isBig ? 380 : 280 },
           { x: centerX, y: centerY, z: centerZ },
-          1000
+          800
         );
         break;
       case "top":
         // 90-degree blueprint plan view (flat, ultra-clear)
         graphRef.current.cameraPosition(
-          { x: centerX, y: isBig ? 1400 : 1050, z: 0.1 },
+          { x: centerX, y: isBig ? 1450 : 1250, z: 0.1 },
           { x: centerX, y: centerY, z: centerZ },
-          1000
+          800
         );
         break;
       case "elevation":
