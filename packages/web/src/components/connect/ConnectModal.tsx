@@ -66,6 +66,16 @@ export const ConnectModal: React.FC = () => {
           ],
           Resource: "*",
         },
+        {
+          Sid: "OptionalCostExplorerBilling",
+          Effect: "Allow",
+          Action: [
+            "ce:GetCostAndUsage",
+            "ce:GetCostForecast",
+            "ce:GetDimensionValues",
+          ],
+          Resource: "*",
+        },
       ],
     },
     null,
@@ -191,6 +201,9 @@ export const ConnectModal: React.FC = () => {
             <p>
               Orbit is strictly <strong>read-only</strong>. Credentials are saved locally with{" "}
               <span className="font-mono text-emerald-400">AES-256-GCM</span> encryption and never sent off your system.
+            </p>
+            <p className="text-[11px] text-zinc-400">
+              <span className="text-zinc-200 font-medium">Optional:</span> Add billing read access (<code className="text-amber-400 font-mono">ce:GetCostAndUsage</code>, <code className="text-amber-400 font-mono">ce:GetCostForecast</code>) to see service cost breakdowns and month-end estimates. If omitted, Orbit runs normally with the Billing section cleanly hidden.
             </p>
             <button
               type="button"

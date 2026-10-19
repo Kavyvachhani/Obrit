@@ -7,6 +7,14 @@ const { Pool } = pg;
 let pool: pg.Pool | null = null;
 let useFallback = false;
 
+export interface LocalUserRecord {
+  id: string;
+  username: string;
+  email?: string;
+  passwordHash: string;
+  createdAt: string;
+}
+
 // In-memory + disk-persisted fallback store when PostgreSQL is not running
 const memoryStore = {
   connected_accounts: new Map<string, Record<string, unknown>>(),
@@ -14,6 +22,7 @@ const memoryStore = {
   resources: new Map<string, Record<string, unknown>>(),
   edges: new Map<string, Record<string, unknown>>(),
   audit_log: [] as Record<string, unknown>[],
+  users: new Map<string, LocalUserRecord>(),
 };
 
 const DATA_DIR = path.resolve(process.cwd(), "data");
@@ -47,7 +56,12 @@ try {
     if (Array.isArray(data.audit_log)) {
       memoryStore.audit_log = data.audit_log;
     }
-    console.log(`[Store] Loaded ${memoryStore.connected_accounts.size} account(s), ${memoryStore.resources.size} resource(s) from persistent storage.`);
+    if (data.users) {
+      for (const [k, v] of Object.entries(data.users)) {
+        memoryStore.users.set(k, v as LocalUserRecord);
+      }
+    }
+    console.log(`[Store] Loaded ${memoryStore.connected_accounts.size} account(s), ${memoryStore.resources.size} resource(s), ${memoryStore.users.size} user(s) from persistent storage.`);
   }
 } catch (e) {
   console.warn("[Store] Could not read existing store file:", e);
@@ -67,12 +81,32 @@ function scheduleSave() {
         resources: Object.fromEntries(memoryStore.resources),
         edges: Object.fromEntries(memoryStore.edges),
         audit_log: memoryStore.audit_log,
+        users: Object.fromEntries(memoryStore.users),
       };
       fs.writeFileSync(STORE_FILE, JSON.stringify(serializable, null, 2), "utf-8");
     } catch (e) {
       console.error("[Store] Failed to save store to disk:", e);
     }
   }, 100);
+}
+
+export function findLocalUser(username: string): LocalUserRecord | undefined {
+  const norm = username.trim().toLowerCase();
+  for (const user of memoryStore.users.values()) {
+    if (user.username.toLowerCase() === norm || (user.email && user.email.toLowerCase() === norm)) {
+      return user;
+    }
+  }
+  return undefined;
+}
+
+export function saveLocalUser(user: LocalUserRecord): void {
+  memoryStore.users.set(user.id, user);
+  scheduleSave();
+}
+
+export function getLocalUsersList(): LocalUserRecord[] {
+  return Array.from(memoryStore.users.values());
 }
 
 export function getPool(): pg.Pool {

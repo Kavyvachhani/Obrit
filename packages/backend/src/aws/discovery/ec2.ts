@@ -31,6 +31,43 @@ export interface Ec2DiscoveryResult {
   edges: Edge[];
 }
 
+async function safeEc2Call<T>(
+  actionName: string,
+  fn: () => Promise<T>,
+  fallback: T,
+  serviceType: string,
+  accountId: string,
+  region: string,
+  resources: Resource[]
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (err: any) {
+    const errName = err?.name || "AccessDenied";
+    const errMsg = err?.message || String(err);
+    resources.push({
+      id: `gap-${actionName.toLowerCase()}-${accountId}`,
+      provider: "aws",
+      accountId,
+      region,
+      type: serviceType,
+      arn: `arn:aws:ec2:${region}:${accountId}:scan-gap/${actionName.toLowerCase()}`,
+      name: `${actionName.replace(/^Describe/, "")} (Scan Gap)`,
+      tags: { Status: "Incomplete", Permission: "AccessDenied" },
+      rawConfig: { action: actionName, error: errMsg },
+      status: "incomplete",
+      lastSeenAt: new Date().toISOString(),
+      scanError: {
+        code: errName.includes("Unauthorized") || errName.includes("AccessDenied") ? "AccessDenied" : errName,
+        operation: `ec2:${actionName}`,
+        message: `ec2:${actionName} returned ${errName} under current IAM role`,
+        suggestedFix: `Attach policy granting ec2:${actionName} to scan IAM role`,
+      },
+    });
+    return fallback;
+  }
+}
+
 export async function discoverEc2(
   client: EC2Client,
   accountId: string,
@@ -41,13 +78,22 @@ export async function discoverEc2(
   const now = new Date().toISOString();
 
   // ─── VPCs ────────────────────────────────────────────────────────────────
-  const vpcsResult = await withRateLimit("ec2", () =>
-    awsReadOnlyCall<{ Vpcs?: Array<Record<string, unknown>> }>(
-      client,
-      new DescribeVpcsCommand({}),
-      "ec2",
-      accountId
-    )
+  const vpcsResult = await safeEc2Call(
+    "DescribeVpcs",
+    () =>
+      withRateLimit("ec2", () =>
+        awsReadOnlyCall<{ Vpcs?: Array<Record<string, unknown>> }>(
+          client,
+          new DescribeVpcsCommand({}),
+          "ec2",
+          accountId
+        )
+      ),
+    { Vpcs: [] },
+    RESOURCE_TYPES.VPC,
+    accountId,
+    region,
+    resources
   );
 
   for (const vpc of vpcsResult.Vpcs ?? []) {
@@ -68,13 +114,22 @@ export async function discoverEc2(
   }
 
   // ─── Subnets ─────────────────────────────────────────────────────────────
-  const subnetsResult = await withRateLimit("ec2", () =>
-    awsReadOnlyCall<{ Subnets?: Array<Record<string, unknown>> }>(
-      client,
-      new DescribeSubnetsCommand({}),
-      "ec2",
-      accountId
-    )
+  const subnetsResult = await safeEc2Call(
+    "DescribeSubnets",
+    () =>
+      withRateLimit("ec2", () =>
+        awsReadOnlyCall<{ Subnets?: Array<Record<string, unknown>> }>(
+          client,
+          new DescribeSubnetsCommand({}),
+          "ec2",
+          accountId
+        )
+      ),
+    { Subnets: [] },
+    RESOURCE_TYPES.SUBNET,
+    accountId,
+    region,
+    resources
   );
 
   for (const subnet of subnetsResult.Subnets ?? []) {
@@ -104,13 +159,22 @@ export async function discoverEc2(
   }
 
   // ─── Route Tables ────────────────────────────────────────────────────────
-  const rtResult = await withRateLimit("ec2", () =>
-    awsReadOnlyCall<{ RouteTables?: Array<Record<string, unknown>> }>(
-      client,
-      new DescribeRouteTablesCommand({}),
-      "ec2",
-      accountId
-    )
+  const rtResult = await safeEc2Call(
+    "DescribeRouteTables",
+    () =>
+      withRateLimit("ec2", () =>
+        awsReadOnlyCall<{ RouteTables?: Array<Record<string, unknown>> }>(
+          client,
+          new DescribeRouteTablesCommand({}),
+          "ec2",
+          accountId
+        )
+      ),
+    { RouteTables: [] },
+    RESOURCE_TYPES.ROUTE_TABLE,
+    accountId,
+    region,
+    resources
   );
 
   for (const rt of rtResult.RouteTables ?? []) {
@@ -155,13 +219,22 @@ export async function discoverEc2(
   }
 
   // ─── Internet Gateways ───────────────────────────────────────────────────
-  const igwResult = await withRateLimit("ec2", () =>
-    awsReadOnlyCall<{ InternetGateways?: Array<Record<string, unknown>> }>(
-      client,
-      new DescribeInternetGatewaysCommand({}),
-      "ec2",
-      accountId
-    )
+  const igwResult = await safeEc2Call(
+    "DescribeInternetGateways",
+    () =>
+      withRateLimit("ec2", () =>
+        awsReadOnlyCall<{ InternetGateways?: Array<Record<string, unknown>> }>(
+          client,
+          new DescribeInternetGatewaysCommand({}),
+          "ec2",
+          accountId
+        )
+      ),
+    { InternetGateways: [] },
+    RESOURCE_TYPES.INTERNET_GATEWAY,
+    accountId,
+    region,
+    resources
   );
 
   for (const igw of igwResult.InternetGateways ?? []) {
@@ -197,13 +270,22 @@ export async function discoverEc2(
   }
 
   // ─── NAT Gateways ───────────────────────────────────────────────────────
-  const natResult = await withRateLimit("ec2", () =>
-    awsReadOnlyCall<{ NatGateways?: Array<Record<string, unknown>> }>(
-      client,
-      new DescribeNatGatewaysCommand({}),
-      "ec2",
-      accountId
-    )
+  const natResult = await safeEc2Call(
+    "DescribeNatGateways",
+    () =>
+      withRateLimit("ec2", () =>
+        awsReadOnlyCall<{ NatGateways?: Array<Record<string, unknown>> }>(
+          client,
+          new DescribeNatGatewaysCommand({}),
+          "ec2",
+          accountId
+        )
+      ),
+    { NatGateways: [] },
+    RESOURCE_TYPES.NAT_GATEWAY,
+    accountId,
+    region,
+    resources
   );
 
   for (const nat of natResult.NatGateways ?? []) {
@@ -246,13 +328,22 @@ export async function discoverEc2(
   }
 
   // ─── Security Groups ─────────────────────────────────────────────────────
-  const sgResult = await withRateLimit("ec2", () =>
-    awsReadOnlyCall<{ SecurityGroups?: Array<Record<string, unknown>> }>(
-      client,
-      new DescribeSecurityGroupsCommand({}),
-      "ec2",
-      accountId
-    )
+  const sgResult = await safeEc2Call(
+    "DescribeSecurityGroups",
+    () =>
+      withRateLimit("ec2", () =>
+        awsReadOnlyCall<{ SecurityGroups?: Array<Record<string, unknown>> }>(
+          client,
+          new DescribeSecurityGroupsCommand({}),
+          "ec2",
+          accountId
+        )
+      ),
+    { SecurityGroups: [] },
+    RESOURCE_TYPES.SECURITY_GROUP,
+    accountId,
+    region,
+    resources
   );
 
   for (const sg of sgResult.SecurityGroups ?? []) {
@@ -284,13 +375,22 @@ export async function discoverEc2(
   }
 
   // ─── EC2 Instances ───────────────────────────────────────────────────────
-  const instancesResult = await withRateLimit("ec2", () =>
-    awsReadOnlyCall<{ Reservations?: Array<{ Instances?: Array<Record<string, unknown>> }> }>(
-      client,
-      new DescribeInstancesCommand({}),
-      "ec2",
-      accountId
-    )
+  const instancesResult = await safeEc2Call(
+    "DescribeInstances",
+    () =>
+      withRateLimit("ec2", () =>
+        awsReadOnlyCall<{ Reservations?: Array<{ Instances?: Array<Record<string, unknown>> }> }>(
+          client,
+          new DescribeInstancesCommand({}),
+          "ec2",
+          accountId
+        )
+      ),
+    { Reservations: [] },
+    RESOURCE_TYPES.EC2_INSTANCE,
+    accountId,
+    region,
+    resources
   );
 
   for (const reservation of instancesResult.Reservations ?? []) {
@@ -367,13 +467,22 @@ export async function discoverEc2(
   }
 
   // ─── Network Interfaces ──────────────────────────────────────────────────
-  const eniResult = await withRateLimit("ec2", () =>
-    awsReadOnlyCall<{ NetworkInterfaces?: Array<Record<string, unknown>> }>(
-      client,
-      new DescribeNetworkInterfacesCommand({}),
-      "ec2",
-      accountId
-    )
+  const eniResult = await safeEc2Call(
+    "DescribeNetworkInterfaces",
+    () =>
+      withRateLimit("ec2", () =>
+        awsReadOnlyCall<{ NetworkInterfaces?: Array<Record<string, unknown>> }>(
+          client,
+          new DescribeNetworkInterfacesCommand({}),
+          "ec2",
+          accountId
+        )
+      ),
+    { NetworkInterfaces: [] },
+    RESOURCE_TYPES.NETWORK_INTERFACE,
+    accountId,
+    region,
+    resources
   );
 
   for (const eni of eniResult.NetworkInterfaces ?? []) {

@@ -163,14 +163,43 @@ export async function runScan(accountId: string): Promise<ScanRun> {
         `${disc.name} discovery complete`
       );
     } catch (err) {
+      const errName = (err as { name?: string })?.name ?? "AccessDenied";
+      const errMsg = err instanceof Error ? err.message : String(err);
+      const isPermissionDenied =
+        errName.includes("AccessDenied") ||
+        errName.includes("Unauthorized") ||
+        errMsg.includes("not authorized") ||
+        errMsg.includes("AccessDenied");
+
       const error: ScanError = {
         service: disc.name,
-        code: (err as { name?: string })?.name ?? "UnknownError",
-        message: err instanceof Error ? err.message : String(err),
+        code: isPermissionDenied ? "AccessDenied" : errName,
+        message: errMsg,
         timestamp: new Date().toISOString(),
       };
       errors.push(error);
-      logger.error({ scanId, service: disc.name, err }, `${disc.name} discovery failed`);
+      logger.warn({ scanId, service: disc.name, err }, `${disc.name} discovery gap detected (${errName})`);
+
+      // Add resilient incomplete resource node representing the scan gap
+      allResources.push({
+        id: `service-gap-${disc.name}-${accountId}`,
+        provider: "aws",
+        accountId,
+        region: creds.region,
+        type: `${disc.name}:service`,
+        arn: `arn:aws:${disc.name}:${creds.region}:${accountId}:scan-gap`,
+        name: `${disc.name.toUpperCase()} (Scan Gap)`,
+        tags: { Status: "Incomplete", Permission: isPermissionDenied ? "AccessDenied" : errName },
+        rawConfig: { service: disc.name, error: errMsg },
+        status: "incomplete",
+        lastSeenAt: new Date().toISOString(),
+        scanError: {
+          code: isPermissionDenied ? "AccessDenied" : errName,
+          operation: `${disc.name}:*`,
+          message: `${disc.name} returned ${errName} under attached IAM role (e.g. SecurityAudit policy gap). Scan continued.`,
+          suggestedFix: `Grant read-only permissions for ${disc.name} to view its resources.`,
+        },
+      });
     }
   }
 

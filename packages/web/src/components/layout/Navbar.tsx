@@ -27,7 +27,12 @@ import {
   ShieldAlert,
   Boxes,
   PanelLeft,
+  Home,
+  Coins,
+  DollarSign,
+  LogOut,
 } from "lucide-react";
+import { logout } from "../../lib/api.js";
 
 export const Navbar: React.FC = () => {
   const {
@@ -56,6 +61,10 @@ export const Navbar: React.FC = () => {
     toggleSidebar,
     isLiveTrafficActive,
     toggleLiveTraffic,
+    isCostOverlayActive,
+    toggleCostOverlay,
+    setBillingOpen,
+    setAccountsOpen,
   } = useGraphStore();
 
   const {
@@ -178,6 +187,16 @@ export const Navbar: React.FC = () => {
               AWS
             </span>
           </div>
+
+          {/* Accounts & Cloud Environments Overview */}
+          <button
+            onClick={() => setAccountsOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#0B0E14]/80 hover:bg-[#262D3A] border border-[#262D3A] text-xs font-medium text-[#CBD5E1] hover:text-white transition-all cursor-pointer"
+            title="View Connected Accounts & Overview"
+          >
+            <Cloud className="w-3.5 h-3.5 text-[#38BDF8]" />
+            <span className="font-medium">Accounts</span>
+          </button>
 
           {/* AWS Profile / Account Switcher Dropdown */}
           <div className="relative" ref={profileRef}>
@@ -485,12 +504,12 @@ export const Navbar: React.FC = () => {
             <span className="text-[11px] font-semibold">{isSecurityHeatmap ? "Heatmap ON" : "Heatmap"}</span>
           </button>
 
-          {/* Layers Dropdown */}
+          {/* Layers & Options Dropdown (Includes Topology, Cloud Costing, and Tier Filters) */}
           <div className="relative" ref={layersRef}>
             <button
               onClick={() => setIsLayersOpen((prev) => !prev)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                isLayersOpen || filterCategory !== "all"
+                isLayersOpen || filterCategory !== "all" || isCostOverlayActive
                   ? "bg-[#262D3A] border-[#4DA3FF] text-[#E6E9EF]"
                   : "bg-[#0B0E14]/80 border-[#262D3A] text-[#8893A6] hover:text-[#E6E9EF] hover:bg-[#262D3A]/40"
               }`}
@@ -530,6 +549,58 @@ export const Navbar: React.FC = () => {
                     >
                       <Layers className="w-3.5 h-3.5 text-purple-400" />
                       <span>2D Diagram</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="h-px bg-[#262D3A]" />
+
+                {/* Cloud Costing & Spend Management */}
+                <div>
+                  <div className="text-[10px] uppercase font-mono tracking-wider text-[#8893A6] mb-1.5 flex items-center justify-between">
+                    <span>Cloud Spend & Costing</span>
+                    <span className="text-[9px] font-mono text-[#10B981]">FinOps</span>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {/* Open Cloud Spend & Forecast Modal */}
+                    <button
+                      onClick={() => {
+                        setBillingOpen(true);
+                        setIsLayersOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs bg-[#0B0E14] hover:bg-[#262D3A] border border-[#262D3A] hover:border-[#10B981]/50 text-[#E6E9EF] transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Coins className="w-3.5 h-3.5 text-[#10B981] group-hover:scale-110 transition-transform" />
+                        <span className="font-medium">Cloud Spend & Forecast</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-[#8893A6] group-hover:text-[#10B981]">
+                        View Details →
+                      </span>
+                    </button>
+
+                    {/* Cost Overlay ($/mo Badges on Nodes) */}
+                    <button
+                      onClick={toggleCostOverlay}
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition-all ${
+                        isCostOverlayActive
+                          ? "bg-[#10B981]/20 border border-[#10B981] text-[#10B981] font-semibold shadow-sm"
+                          : "bg-[#0B0E14] text-[#8893A6] hover:text-[#E6E9EF] border border-[#262D3A]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-3.5 h-3.5 text-[#10B981]" />
+                        <span>Cost Overlay ($/mo Badges)</span>
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                          isCostOverlayActive
+                            ? "bg-[#10B981] text-[#0B0E14]"
+                            : "bg-[#262D3A] text-[#8893A6]"
+                        }`}
+                      >
+                        {isCostOverlayActive ? "ON" : "OFF"}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -576,6 +647,21 @@ export const Navbar: React.FC = () => {
             title="AWS Account Settings & Connect"
           >
             <Settings className="w-4 h-4" />
+          </button>
+
+          {/* Sign Out / Exit Session */}
+          <button
+            onClick={async () => {
+              try {
+                await logout();
+              } finally {
+                window.location.reload();
+              }
+            }}
+            className="p-1.5 rounded-lg bg-[#0B0E14]/80 border border-[#262D3A] text-[#8893A6] hover:text-[#FF5C5C] hover:bg-[#FF5C5C]/15 transition-colors"
+            title="Sign Out / Switch User"
+          >
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>

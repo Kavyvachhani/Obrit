@@ -37,6 +37,11 @@ interface GraphState {
   isSidebarOpen: boolean;
   isLiveTrafficActive: boolean;
   focusedBlastRadiusNodeId: string | null;
+  currentView: "home" | "topology" | "billing";
+  isCostOverlayActive: boolean;
+  billingData: any | null;
+  isBillingOpen: boolean;
+  isAccountsOpen: boolean;
 
   setGraphData: (data: GraphData) => void;
   selectNode: (node: GraphNode | null) => void;
@@ -64,6 +69,12 @@ interface GraphState {
   toggleLiveTraffic: () => void;
   setLiveTrafficActive: (active: boolean) => void;
   setFocusedBlastRadiusNodeId: (nodeId: string | null) => void;
+  setCurrentView: (view: "home" | "topology" | "billing") => void;
+  toggleCostOverlay: () => void;
+  setCostOverlayActive: (active: boolean) => void;
+  setBillingData: (data: any | null) => void;
+  setBillingOpen: (open: boolean) => void;
+  setAccountsOpen: (open: boolean) => void;
 }
 
 export const useGraphStore = create<GraphState>((set) => ({
@@ -90,6 +101,11 @@ export const useGraphStore = create<GraphState>((set) => ({
   isSidebarOpen: false,
   isLiveTrafficActive: true,
   focusedBlastRadiusNodeId: null,
+  currentView: "home",
+  isCostOverlayActive: false,
+  billingData: null,
+  isBillingOpen: false,
+  isAccountsOpen: false,
 
   setGraphData: (data) =>
     set({
@@ -121,4 +137,10 @@ export const useGraphStore = create<GraphState>((set) => ({
   toggleLiveTraffic: () => set((state) => ({ isLiveTrafficActive: !state.isLiveTrafficActive })),
   setLiveTrafficActive: (active) => set({ isLiveTrafficActive: active }),
   setFocusedBlastRadiusNodeId: (nodeId) => set({ focusedBlastRadiusNodeId: nodeId }),
+  setCurrentView: (view) => set({ currentView: view }),
+  toggleCostOverlay: () => set((state) => ({ isCostOverlayActive: !state.isCostOverlayActive })),
+  setCostOverlayActive: (active) => set({ isCostOverlayActive: active }),
+  setBillingData: (data) => set({ billingData: data }),
+  setBillingOpen: (open) => set({ isBillingOpen: open }),
+  setAccountsOpen: (open) => set({ isAccountsOpen: open }),
 }));

@@ -201,7 +201,7 @@ export const InspectorPanel: React.FC = () => {
   if (!selectedNode) return null;
 
   return (
-    <aside className="absolute top-22 right-4 bottom-4 w-96 max-w-[calc(100vw-2rem)] bg-[#121620]/95 backdrop-blur-md rounded-xl border border-[#262D3A] flex flex-col z-40 shadow-2xl overflow-hidden font-sans animate-in fade-in slide-in-from-right-2 duration-150">
+    <aside className="absolute top-[4.75rem] right-4 bottom-4 w-96 max-w-[calc(100vw-2rem)] bg-[#121620]/95 backdrop-blur-md rounded-xl border border-[#262D3A] flex flex-col z-40 shadow-2xl overflow-hidden font-sans animate-in fade-in slide-in-from-right-2 duration-150">
       {/* Panel Header */}
       <div className="p-3.5 border-b border-[#262D3A] flex items-center justify-between bg-[#151A24]">
         <div className="flex items-center space-x-2.5 pr-2 overflow-hidden min-w-0">
@@ -226,10 +226,10 @@ export const InspectorPanel: React.FC = () => {
         </div>
         <button
           onClick={() => selectNode(null)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#8893A6] hover:text-[#E6E9EF] bg-[#0B0E14] hover:bg-[#262D3A] border border-[#262D3A] transition-colors cursor-pointer shrink-0 shadow-sm"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-[#262D3A] hover:bg-[#FF5C5C] hover:text-white transition-all cursor-pointer shrink-0 shadow-md border border-[#384152]"
           title="Close details panel (or press Esc)"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-4 h-4" />
           <span>Close</span>
         </button>
       </div>

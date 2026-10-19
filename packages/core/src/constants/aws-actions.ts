@@ -80,8 +80,9 @@ export const CORE_ALLOWED_ACTIONS: string[] = [
   "DescribeCacheClusters",
   "DescribeReplicationGroups",
 
-  // ─── Cost Explorer (Unplanned Services Detector) ─────────────────────────
+  // ─── Cost Explorer (Unplanned Services Detector & Billing Forecast) ───────
   "GetCostAndUsage",
+  "GetCostForecast",
   "GetDimensionValues",
 ];
 

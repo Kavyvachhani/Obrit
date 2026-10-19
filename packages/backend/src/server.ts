@@ -2,12 +2,15 @@ import fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
+import cookie from "@fastify/cookie";
 import { runMigrations } from "./db/migrations.js";
 import { accountRoutes } from "./routes/accounts.js";
 import { scanRoutes } from "./routes/scan.js";
 import { graphRoutes } from "./routes/graph.js";
 import { resourceRoutes } from "./routes/resources.js";
 import { demoRoutes } from "./routes/demo.js";
+import { authRoutes, verifySessionToken } from "./routes/auth.js";
+import { billingRoutes } from "./routes/billing.js";
 
 const PORT = parseInt(process.env["PORT"] || "4000", 10);
 const HOST = process.env["HOST"] || "0.0.0.0";
@@ -23,6 +26,9 @@ export async function buildServer() {
     crossOriginResourcePolicy: { policy: "cross-origin" },
   });
 
+  // Parse cookies
+  await app.register(cookie);
+
   // CORS for frontend dev server & desktop app
   await app.register(cors, {
     origin: (_origin, cb) => {
@@ -33,13 +39,13 @@ export async function buildServer() {
     credentials: true,
   });
 
-  // Rate limiting (100 req/min per IP)
+  // Rate limiting (120 req/min per IP)
   await app.register(rateLimit, {
     max: 120,
     timeWindow: "1 minute",
   });
 
-  // Health check
+  // Health check (public)
   app.get("/api/health", async () => {
     return {
       status: "ok",
@@ -49,7 +55,34 @@ export async function buildServer() {
     };
   });
 
+  // App-level login gate hook (protects all /api/* routes except health & auth)
+  app.addHook("onRequest", async (request, reply) => {
+    const url = request.url.split("?")[0] || "";
+
+    // Allow static frontend assets, health check, and auth routes
+    if (!url.startsWith("/api") || url === "/api/health" || url.startsWith("/api/auth")) {
+      return;
+    }
+
+    const cookieToken = request.cookies?.orbit_session;
+    const authHeader = request.headers.authorization;
+    const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+
+    const token = cookieToken || bearerToken;
+    const isAuthenticated = verifySessionToken(token);
+
+    if (!isAuthenticated) {
+      return reply.status(401).send({
+        error: "Authentication required",
+        message: "You must log in to access Orbit infrastructure data and AWS accounts",
+        redirectTo: "/login",
+      });
+    }
+  });
+
   // Register domain routes
+  await app.register(authRoutes);
+  await app.register(billingRoutes);
   await app.register(accountRoutes);
   await app.register(scanRoutes);
   await app.register(graphRoutes);

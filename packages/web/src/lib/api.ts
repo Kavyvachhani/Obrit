@@ -78,3 +78,87 @@ export async function seedDemoData(): Promise<{
   if (!res.ok) throw new Error("Failed to seed demo data");
   return res.json();
 }
+
+export interface BillingServiceSummary {
+  serviceName: string;
+  shortName: string;
+  mtdCost: number;
+  estimatedMonthEndCost: number;
+  resourcePrefixes: string[];
+}
+
+export interface BillingData {
+  available: boolean;
+  reason?: string;
+  currency?: string;
+  monthToDateTotal?: number;
+  estimatedMonthEndTotal?: number;
+  services?: BillingServiceSummary[];
+}
+
+export async function fetchBilling(accountId: string): Promise<BillingData> {
+  const res = await fetch(`${API_BASE}/billing/${accountId}`, { credentials: "include" });
+  if (!res.ok) {
+    return { available: false, reason: "Billing data unavailable or permission not granted" };
+  }
+  return res.json();
+}
+
+export async function login(usernameOrPassword: string, maybePassword?: string): Promise<{ success: boolean; token?: string; user?: any }> {
+  const body = maybePassword
+    ? { username: usernameOrPassword, password: maybePassword }
+    : { password: usernameOrPassword };
+
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Invalid credentials");
+  }
+  return res.json();
+}
+
+export async function register(username: string, password: string, email?: string): Promise<{ success: boolean; token?: string; user?: any }> {
+  const res = await fetch(`${API_BASE}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ username, password, email }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Registration failed");
+  }
+  return res.json();
+}
+
+export async function loginAsGuest(): Promise<{ success: boolean; token?: string; user?: any }> {
+  const res = await fetch(`${API_BASE}/auth/guest`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    throw new Error("Failed to start guest session");
+  }
+  return res.json();
+}
+
+export async function checkAuth(): Promise<{ authenticated: boolean; user?: any }> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/me`, { credentials: "include" });
+    if (!res.ok) return { authenticated: false };
+    return res.json();
+  } catch {
+    return { authenticated: false };
+  }
+}
+
+export async function logout(): Promise<void> {
+  await fetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" });
+}
+
+

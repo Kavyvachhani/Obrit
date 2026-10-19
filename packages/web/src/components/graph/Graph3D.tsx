@@ -50,6 +50,7 @@ export const Graph3D: React.FC = () => {
     activeThreatScenario,
     isLiveTrafficActive,
     focusedBlastRadiusNodeId,
+    isCostOverlayActive,
     selectNode,
     hoverNode,
     hoverLink,
@@ -127,8 +128,8 @@ export const Graph3D: React.FC = () => {
           cont.removeChild(cont.firstChild);
         }
 
-        fg = new ForceGraph3D(cont)
-          .backgroundColor("#0C101A")
+        fg = new ForceGraph3D(cont, { controlType: "orbit" })
+          .backgroundColor("#0B0E14")
           .showNavInfo(false)
           .width(cont.clientWidth)
           .height(cont.clientHeight)
@@ -136,7 +137,7 @@ export const Graph3D: React.FC = () => {
             const gNode = node as unknown as GraphNode;
             const isSelected = selectedNode?.id === gNode.id;
             const isHovered = hoveredNode?.id === gNode.id;
-            return create3DNodeObject(gNode, isSelected, isHovered);
+            return create3DNodeObject(gNode, isSelected, isHovered, isCostOverlayActive);
           })
       .nodeLabel((node) => {
         const gNode = node as unknown as GraphNode;
@@ -155,10 +156,11 @@ export const Graph3D: React.FC = () => {
         selectNode(gNode);
         if (graphRef.current && (node as any).x !== undefined) {
           const { x = 0, y = 0, z = 0 } = node as { x: number; y: number; z: number };
+          // Balanced isometric framing: frames the node with upstream/downstream connections clearly visible, preventing card occlusion
           graphRef.current.cameraPosition(
-            { x: x + 60, y: y + 40, z: z + 70 },
+            { x: x + 110, y: y + 250, z: z + 290 },
             { x, y, z },
-            1000
+            800
           );
         }
       })
@@ -168,9 +170,14 @@ export const Graph3D: React.FC = () => {
         hoverLink(null);
         setEdgeTooltip(null);
       })
-      // Link hover & picking interaction (subtle flat curvature prevents crossing through billboard cards)
+      // Link hover & picking interaction with smooth architectural arc
       .linkHoverPrecision(6)
-      .linkCurvature(0.02)
+      .linkCurvature((link: any) => {
+        const gLink = link as unknown as GraphLink;
+        // Inferred links (scan gaps) get a higher arc so they stand out clearly
+        if (gLink.isInferred) return 0.14;
+        return 0.05;
+      })
       .onLinkHover((link) => {
         if (!link) {
           hoverLink(null);
@@ -391,13 +398,13 @@ export const Graph3D: React.FC = () => {
     rimLight.position.set(0, -300, 300);
     scene.add(rimLight);
 
-    // ── Human-Crafted Architectural Scene Background ──
-    scene.fog = new THREE.FogExp2(0x0E131E, 0.00022);
+    // ── Canonical Architectural Scene Background (#0B0E14 Cool Graphite) ──
+    scene.fog = new THREE.FogExp2(0x0B0E14, 0.00022);
 
-    // Architectural Ground Plate (Soft deep slate CAD drawing surface)
+    // Architectural Ground Plate (Matches #0B0E14 cool graphite)
     const groundGeo = new THREE.PlaneGeometry(6000, 6000);
     const groundMat = new THREE.MeshBasicMaterial({
-      color: 0x0A0E17,
+      color: 0x0B0E14,
       depthWrite: false,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
@@ -428,8 +435,8 @@ export const Graph3D: React.FC = () => {
     platesGroupRef.current = platesGroup;
     scene.add(platesGroup);
 
-    // ── Initial Camera: Clean Isometric Perspective (62° elevation, zero card overlap, full schematic legibility) ──
-    fg.cameraPosition({ x: 220, y: 780, z: 420 }, { x: 220, y: -40, z: 0 }, 1000);
+    // ── Initial Camera: Clean Isometric Perspective (elevated 45° angle, zero card overlap, full schematic legibility) ──
+    fg.cameraPosition({ x: 220, y: 550, z: 680 }, { x: 220, y: -35, z: 0 }, 1000);
 
     // Billboard rotation on camera move
     const updateBillboards = () => {
@@ -450,11 +457,27 @@ export const Graph3D: React.FC = () => {
         controls.maxPolarAngle = Math.PI / 2.7; // ~66° - guarantees clear overhead bird's-eye readability
         controls.minPolarAngle = 0;             // Allow complete clean top-down plan view
         controls.enableRotate = false;           // ROTATION LOCKED BY DEFAULT for stable map readability
+        controls.enablePan = true;
         controls.enableDamping = true;
         controls.dampingFactor = 0.12;
-        controls.rotateSpeed = 0.6;
         controls.panSpeed = 1.2;
         controls.screenSpacePanning = true;
+
+        // Map left-click drag and touch drag directly to PAN (like Figma / Miro / Cloudcraft)
+        if (THREE.MOUSE) {
+          controls.mouseButtons = {
+            LEFT: THREE.MOUSE.PAN,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.PAN,
+          };
+        }
+        if (THREE.TOUCH) {
+          controls.touches = {
+            ONE: THREE.TOUCH.PAN,
+            TWO: THREE.TOUCH.DOLLY_PAN,
+          };
+        }
+
         if (typeof controls.addEventListener === "function") {
           controls.addEventListener("change", updateBillboards);
         }
@@ -491,7 +514,7 @@ export const Graph3D: React.FC = () => {
           const target = positionedNodes.find((n) => n.id === targetId);
           if (target && fg) {
             const { x = 0, y = 0, z = 0 } = target;
-            fg.cameraPosition({ x: x + 80, y: y + 50, z: z + 90 }, { x, y, z }, 1200);
+            fg.cameraPosition({ x: x + 110, y: y + 250, z: z + 290 }, { x, y, z }, 900);
           }
         };
 
@@ -562,11 +585,11 @@ export const Graph3D: React.FC = () => {
     }, 150);
   }, [positionedNodes, trafficLinks]);
 
-  // Re-render meshes on selection change
+  // Re-render meshes on selection change or cost overlay toggle
   useEffect(() => {
     if (!graphRef.current) return;
     graphRef.current.nodeThreeObject(graphRef.current.nodeThreeObject());
-  }, [selectedNode, hoveredNode]);
+  }, [selectedNode, hoveredNode, isCostOverlayActive]);
 
   // Re-evaluate 3D link visuals & dim unconnected nodes when hoveredLink, threatSimulation, or isSecurityHeatmap changes
   useEffect(() => {
@@ -729,15 +752,17 @@ export const Graph3D: React.FC = () => {
     setActivePreset(preset);
     if (!graphRef.current) return;
     const isBig = positionedNodes.length > 25;
-    const centerX = isBig ? 450 : 250;
-    const centerY = -40;
+    const centerX = isBig ? 320 : 220;
+    const centerY = -35;
     const centerZ = 0;
 
     switch (preset) {
+      case "fit":
       case "iso":
-        // High-elevation isometric perspective (63° angle, zero card occlusion, full schematic visibility)
+      case "angle":
+        // Clean square architectural isometric perspective (aligned along Z axis, zero yaw diagonal tilt)
         graphRef.current.cameraPosition(
-          { x: centerX, y: isBig ? 950 : 800, z: isBig ? 480 : 400 },
+          { x: centerX, y: isBig ? 620 : 540, z: isBig ? 780 : 660 },
           { x: centerX, y: centerY, z: centerZ },
           800
         );
@@ -749,17 +774,6 @@ export const Graph3D: React.FC = () => {
           { x: centerX, y: centerY, z: centerZ },
           800
         );
-        break;
-      case "angle":
-        // 3/4 architectural perspective angle
-        graphRef.current.cameraPosition(
-          { x: centerX - 260, y: isBig ? 880 : 740, z: isBig ? 540 : 450 },
-          { x: centerX, y: centerY, z: centerZ },
-          900
-        );
-        break;
-      case "fit":
-        graphRef.current.zoomToFit(800, 70);
         break;
     }
   };
@@ -777,9 +791,12 @@ export const Graph3D: React.FC = () => {
   return (
     <div
       onPointerMove={handlePointerMove}
-      className="relative w-full h-full overflow-hidden bg-[#0C101A]"
+      className="relative w-full h-full overflow-hidden bg-[#0B0E14]"
     >
       <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+
+      {/* Subtle vignette radial darkening toward edges staying inside #0B0E14 palette */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(11,14,20,0.7)_100%)]" />
 
       {/* Visible Fallback Banner if 3D encounters an initialization issue */}
       {initError && (
@@ -886,31 +903,29 @@ interface FloorPlateConfig {
 }
 
 function addFloorPlate(parent: THREE.Object3D, config: FloorPlateConfig) {
-  // Extruded 3D slab box geometry for solid architectural depth
-  const slabHeight = 4;
+  // Extruded 3D slab box geometry for architectural depth
+  const slabHeight = 3.5;
   const boxGeo = new THREE.BoxGeometry(config.width, slabHeight, config.depth);
 
-  // Subtle translucent glass platform with tier's distinct color accent
-  const baseColor = new THREE.Color(config.color);
-  const surfaceColor = new THREE.Color(0x0C101A).lerp(baseColor, 0.22);
+  // Zone/AZ platforms sit on top at rgba(21,26,36,.5) with 1px #262D3A border
   const mat = new THREE.MeshStandardMaterial({
-    color: surfaceColor,
+    color: 0x151A24, // rgba(21, 26, 36)
     transparent: true,
-    opacity: 0.88,
-    metalness: 0.35,
-    roughness: 0.5,
+    opacity: 0.5,
+    metalness: 0.2,
+    roughness: 0.6,
     side: THREE.DoubleSide,
   });
   const slabMesh = new THREE.Mesh(boxGeo, mat);
   slabMesh.position.set(config.position[0], config.position[1] - slabHeight / 2, config.position[2]);
   parent.add(slabMesh);
 
-  // Glowing vivid perimeter outline around the top edge
+  // 1px #262D3A border creating visible separation and depth
   const edgeMat = new THREE.LineBasicMaterial({
-    color: config.color,
+    color: 0x262D3A, // 1px #262D3A border
     transparent: true,
-    opacity: 0.85,
-    linewidth: 2.5,
+    opacity: 0.95,
+    linewidth: 1,
   });
   const topPlaneGeo = new THREE.PlaneGeometry(config.width, config.depth);
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(topPlaneGeo), edgeMat);

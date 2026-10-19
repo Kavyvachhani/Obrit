@@ -14,6 +14,7 @@ import {
   drawOfficialAwsVectorIcon,
   getNodeVisualStatus,
   getStatusColor,
+  getNodeMonthlyCost,
 } from "./node-3d-factory.js";
 import type { GraphNode, GraphLink } from "@orbit/core";
 
@@ -45,6 +46,7 @@ export const Graph2D: React.FC = () => {
     isGrouped,
     isLiveTrafficActive,
     focusedBlastRadiusNodeId,
+    isCostOverlayActive,
     selectNode,
     hoverNode,
     hoverLink,
@@ -223,11 +225,15 @@ export const Graph2D: React.FC = () => {
         ctx.shadowColor = statusColor;
         ctx.shadowBlur = isSelected ? 20 : isHovered ? 14 : 8;
 
-        // ── Card body ──
+        // ── Card body (Translucent chip at rgba(21, 26, 36, 0.85)) ──
         ctx.beginPath();
         if (ctx.roundRect) ctx.roundRect(rx, ry, w, h, 10);
         else ctx.rect(rx, ry, w, h);
-        ctx.fillStyle = isSelected ? "#1a1a24" : isHovered ? "#14141c" : "#0e0e14";
+        ctx.fillStyle = isSelected
+          ? "rgba(30, 39, 56, 0.95)"
+          : isHovered
+          ? "rgba(24, 32, 48, 0.92)"
+          : "rgba(21, 26, 36, 0.85)";
         ctx.fill();
 
         // Reset shadow for crisp borders
@@ -260,30 +266,35 @@ export const Graph2D: React.FC = () => {
         const iconY = ry + (h - iconSize) / 2;
         drawOfficialAwsVectorIcon(ctx, style.iconType, isIncomplete ? "#475569" : style.badgeBg, iconX, iconY, iconSize);
 
-        // ── Text Content ──
+        // ── Text Content Area with text-shadow protection (WCAG AA compliant) ──
         const textX = iconX + iconSize + 11;
         const isCluster = Boolean((gNode.rawConfig as any)?.isCluster);
 
-        // Service type tag
-        ctx.font = "bold 9.5px 'Inter', sans-serif";
-        ctx.fillStyle = isIncomplete ? "#8893A6" : (isCluster ? "#38BDF8" : style.color);
+        ctx.shadowColor = "rgba(0, 0, 0, 0.95)";
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 1;
+
+        // Service type tag (Minimum 11px)
+        ctx.font = "bold 11px 'Inter', sans-serif";
+        ctx.fillStyle = isIncomplete ? "#94A3B8" : (isCluster ? "#38BDF8" : style.color);
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
         const tagText = isCluster
           ? `FLEET • ${(gNode.rawConfig as any).totalCount}`
           : isIncomplete ? `${style.shortType} • INCOMPLETE` : style.shortType;
-        ctx.fillText(tagText, textX, ry + 11);
+        ctx.fillText(tagText, textX, ry + 10);
 
-        // Resource name (bold & high-visibility)
-        ctx.font = "600 13px 'Inter', sans-serif";
+        // Resource name (bold 13.5px & high-visibility #FFFFFF)
+        ctx.font = "bold 13.5px 'Inter', sans-serif";
         ctx.fillStyle = "#ffffff";
         let title = gNode.name || gNode.id;
         if (title.length > 20) title = title.slice(0, 19) + "…";
         ctx.fillText(title, textX, ry + 25);
 
-        // Config detail
-        ctx.font = "500 9.5px 'JetBrains Mono', monospace";
-        ctx.fillStyle = isIncomplete ? "#cbd5e1" : "#8892a0";
+        // Config detail / IP (Minimum 11px, high-contrast #E2E8F0)
+        ctx.font = "600 11px 'JetBrains Mono', monospace";
+        ctx.fillStyle = isIncomplete ? "#CBD5E1" : "#E2E8F0";
         let detail = gNode.region || "us-east-1";
         if (isCluster) {
           const raw = (gNode.rawConfig as any) || {};
@@ -303,6 +314,9 @@ export const Graph2D: React.FC = () => {
         }
         if (detail.length > 22) detail = detail.slice(0, 21) + "…";
         ctx.fillText(detail, textX, ry + 44);
+
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
 
         // ── Health Status Indicator (top right) ──
         if (isIncomplete) {
@@ -343,6 +357,31 @@ export const Graph2D: React.FC = () => {
           ctx.textAlign = "right";
           ctx.textBaseline = "middle";
           ctx.fillText(visualStatus.toUpperCase(), rx + w - 21, ry + 12);
+        }
+
+        // ── Cost Overlay Badge (§5) ──
+        if (isCostOverlayActive) {
+          const costBadge = getNodeMonthlyCost(gNode);
+          const badgeW = 62;
+          const badgeH = 17;
+          const badgeX = rx + w - badgeW - 8;
+          const badgeY = ry + h - badgeH - 7;
+
+          ctx.fillStyle = "rgba(16, 185, 129, 0.22)";
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
+          else ctx.rect(badgeX, badgeY, badgeW, badgeH);
+          ctx.fill();
+
+          ctx.strokeStyle = "#10B981";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          ctx.font = "bold 9.5px 'JetBrains Mono', monospace";
+          ctx.fillStyle = "#34D399";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(costBadge, badgeX + badgeW / 2, badgeY + badgeH / 2);
         }
 
         ctx.restore();

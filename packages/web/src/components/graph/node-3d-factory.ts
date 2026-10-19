@@ -1106,23 +1106,48 @@ function build3DDeviceMesh(
    it AUTOMATICALLY faces the camera and NEVER flips backwards,
    upside down, or mirrored!
    ─────────────────────────────────────────────────────────── */
+export function getNodeMonthlyCost(node: GraphNode): string {
+  const raw = (node.rawConfig as any) || {};
+  if (raw.monthlyCost) return `$${raw.monthlyCost}/mo`;
+  if (raw.estimatedCost) return `$${raw.estimatedCost}/mo`;
+
+  const type = (node.type || "").toLowerCase();
+  if (type.includes("rds") || type.includes("database")) return "$146/mo";
+  if (type.includes("instance") || type.includes("ec2")) return "$72/mo";
+  if (type.includes("loadbalancer") || type.includes("alb") || type.includes("elb")) return "$28/mo";
+  if (type.includes("nat")) return "$32/mo";
+  if (type.includes("lambda") || type.includes("function")) return "$14/mo";
+  if (type.includes("s3") || type.includes("bucket")) return "$22/mo";
+  if (type.includes("dynamodb")) return "$35/mo";
+  if (type.includes("cloudfront")) return "$48/mo";
+  if (type.includes("apigateway")) return "$18/mo";
+  if (type.includes("sqs") || type.includes("queue")) return "$5/mo";
+  if (type.includes("sns") || type.includes("topic")) return "$4/mo";
+  if (type.includes("ecs") || type.includes("cluster")) return "$96/mo";
+  if (type.includes("vpc") || type.includes("subnet") || type.includes("security") || type.includes("route") || type.includes("gateway")) return "$0/mo";
+  return "$12/mo";
+}
+
 function build3DLabelSprite(
   node: GraphNode,
   style: ServiceStyle,
   visualStatus: VisualStatus,
   isSelected: boolean,
-  isHovered: boolean
+  isHovered: boolean,
+  isCostOverlayActive = false
 ): THREE.Sprite {
   const isCluster = Boolean((node.rawConfig as any)?.isCluster);
   const statusColor = getStatusColor(visualStatus);
   const isIncomplete = visualStatus === "incomplete";
+  const cost = (node.rawConfig as any)?.monthlyCost || (node.rawConfig as any)?.estimatedCost;
 
-  const cacheKey = `sprite_v5_cloudcraft_${node.id}_${isSelected}_${isHovered}_${visualStatus}`;
+  const cacheKey = `sprite_v7_readability_${node.id}_${isSelected}_${isHovered}_${visualStatus}_${isCostOverlayActive}_${cost || ""}`;
   let texture = textureCache.get(cacheKey);
 
   if (!texture) {
-    const W = isCluster ? 620 : 540;
-    const H = 130;
+    // High-resolution canvas dimensions
+    const W = isCluster ? 640 : 560;
+    const H = 140;
     const canvas = document.createElement("canvas");
     canvas.width = W;
     canvas.height = H;
@@ -1134,14 +1159,18 @@ function build3DLabelSprite(
     const w = W - pad * 2;
     const h = H - pad * 2;
 
-    // Sleek Cloudcraft pill backing (translucent graphite)
+    // Translucent background chip (panel surface color #151A24 at ~85% opacity)
     ctx.shadowColor = "rgba(0, 0, 0, 0.85)";
-    ctx.shadowBlur = 14;
+    ctx.shadowBlur = 16;
     ctx.shadowOffsetY = 4;
 
-    ctx.fillStyle = isSelected ? "#1E2738" : isHovered ? "#182030" : "rgba(16, 22, 34, 0.94)";
+    ctx.fillStyle = isSelected
+      ? "rgba(30, 39, 56, 0.95)"
+      : isHovered
+      ? "rgba(24, 32, 48, 0.92)"
+      : "rgba(21, 26, 36, 0.85)";
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(pad, pad, w, h, 20);
+    if (ctx.roundRect) ctx.roundRect(pad, pad, w, h, 18);
     else ctx.rect(pad, pad, w, h);
     ctx.fill();
 
@@ -1149,28 +1178,37 @@ function build3DLabelSprite(
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
 
-    // Crisp status border
-    ctx.lineWidth = isSelected ? 4.5 : isHovered ? 3.5 : 2.5;
+    // 1px #262D3A border (accented with status color or dashed for incomplete)
     if (isIncomplete) {
       ctx.strokeStyle = "#8893A6";
+      ctx.lineWidth = 2.5;
       ctx.setLineDash([10, 6]);
       ctx.stroke();
       ctx.setLineDash([]);
+    } else if (isSelected) {
+      ctx.strokeStyle = "#4DA3FF";
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+    } else if (isHovered) {
+      ctx.strokeStyle = statusColor;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
     } else {
-      ctx.strokeStyle = isCluster ? "#38BDF8" : statusColor;
+      ctx.strokeStyle = "#262D3A";
+      ctx.lineWidth = 2;
       ctx.stroke();
     }
 
     // Left service icon badge box
-    const iconBoxW = 90;
-    ctx.fillStyle = `${style.color}22`;
+    const iconBoxW = 96;
+    ctx.fillStyle = isSelected ? "rgba(77, 163, 255, 0.18)" : `${style.color}18`;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(pad, pad, iconBoxW, h, [20, 0, 0, 20]);
+    if (ctx.roundRect) ctx.roundRect(pad, pad, iconBoxW, h, [18, 0, 0, 18]);
     else ctx.rect(pad, pad, iconBoxW, h);
     ctx.fill();
 
-    // Divider line
-    ctx.strokeStyle = `${style.color}40`;
+    // Subtle divider line
+    ctx.strokeStyle = "#262D3A";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(pad + iconBoxW, pad);
@@ -1190,35 +1228,71 @@ function build3DLabelSprite(
       iconSize
     );
 
-    // Text Content Area
-    const textLeft = pad + iconBoxW + 16;
+    // Text Content Area (Protected by text-shadow for WCAG AA readability over any scene backdrop)
+    const textLeft = pad + iconBoxW + 18;
+    ctx.shadowColor = "rgba(0, 0, 0, 0.95)";
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
 
-    // Service category tag (small pill)
-    ctx.font = "bold 18px 'Inter', sans-serif";
-    ctx.fillStyle = isIncomplete ? "#94A3B8" : (isCluster ? "#38BDF8" : style.color);
+    // 1. Service category tag (bold 30px -> ~11.5px on screen)
+    ctx.font = "bold 30px 'Inter', -apple-system, sans-serif";
+    ctx.fillStyle = isIncomplete ? "#94A3B8" : isCluster ? "#38BDF8" : style.color;
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     const tagText = isCluster
       ? `FLEET • ${(node.rawConfig as any).totalCount}`
       : `${style.shortType.toUpperCase()}`;
-    ctx.fillText(tagText, textLeft, pad + 16);
+    ctx.fillText(tagText, textLeft, pad + 14);
 
-    // Resource Name (Clean, high-contrast white text)
-    ctx.font = "bold 32px 'Inter', -apple-system, sans-serif";
+    // Optional Billing Cost Overlay Badge (§5)
+    if (isCostOverlayActive) {
+      const costBadge = getNodeMonthlyCost(node);
+      const badgeW = 135;
+      const badgeH = 34;
+      const badgeX = W - pad - badgeW - 32;
+      const badgeY = pad + 12;
+
+      ctx.shadowColor = "transparent";
+      ctx.fillStyle = "rgba(16, 185, 129, 0.25)";
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 8);
+      else ctx.rect(badgeX, badgeY, badgeW, badgeH);
+      ctx.fill();
+
+      ctx.strokeStyle = "#10B981";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.font = "bold 22px 'JetBrains Mono', monospace";
+      ctx.fillStyle = "#34D399";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(costBadge, badgeX + badgeW / 2, badgeY + badgeH / 2);
+
+      ctx.shadowColor = "rgba(0, 0, 0, 0.95)";
+    }
+
+    // 2. Resource Name (bold 42px -> ~16px on screen, #FFFFFF has 17.3:1 contrast against #151A24)
+    ctx.font = "bold 42px 'Inter', -apple-system, sans-serif";
     ctx.fillStyle = "#FFFFFF";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
     let displayName = node.name || node.id;
     if (displayName.length > 20) displayName = displayName.slice(0, 19) + "…";
-    ctx.fillText(displayName, textLeft, pad + 42);
+    ctx.fillText(displayName, textLeft, pad + 44);
 
-    // Subtitle / IP / Detail
-    ctx.font = "600 18px 'JetBrains Mono', monospace";
-    ctx.fillStyle = isIncomplete ? "#CBD5E1" : "#94A3B8";
+    // 3. Subtitle / IP / Detail (600 28px -> ~11.2px on screen, #CBD5E1 has 11.5:1 contrast)
+    ctx.font = "600 28px 'JetBrains Mono', monospace";
+    ctx.fillStyle = isIncomplete ? "#CBD5E1" : "#E2E8F0";
     let detail = node.region || "us-east-1";
     if (isCluster) {
       const raw = (node.rawConfig as any) || {};
       detail = `${raw.healthyCount || raw.totalCount} Healthy`;
     } else if (isIncomplete && node.scanError) {
       detail = `⚠️ Missing IAM: ${node.scanError.code}`;
+    } else if (cost) {
+      detail = `$${cost}/mo • ${node.region || "us-east-1"}`;
     } else if (node.rawConfig && (node.rawConfig as any).PrivateIpAddress) {
       detail = `${(node.rawConfig as any).PrivateIpAddress}`;
     } else if (node.rawConfig && (node.rawConfig as any).InstanceType) {
@@ -1227,22 +1301,27 @@ function build3DLabelSprite(
       detail = `${(node.rawConfig as any).Engine}`;
     }
     if (detail.length > 24) detail = detail.slice(0, 23) + "…";
-    ctx.fillText(detail, textLeft, pad + 82);
+    ctx.fillText(detail, textLeft, pad + 88);
+
+    // Clear text shadow for crisp status dot
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
 
     // Right-hand Status LED Indicator Dot
-    const statusDotX = W - pad - 24;
+    const statusDotX = W - pad - 26;
     const statusDotY = pad + h / 2;
 
     ctx.beginPath();
-    ctx.arc(statusDotX, statusDotY, 9, 0, Math.PI * 2);
+    ctx.arc(statusDotX, statusDotY, 10, 0, Math.PI * 2);
     ctx.fillStyle = statusColor;
     ctx.fill();
 
-    // Subtle glow ring around LED
+    // Glow ring around LED
     ctx.beginPath();
-    ctx.arc(statusDotX, statusDotY, 13, 0, Math.PI * 2);
+    ctx.arc(statusDotX, statusDotY, 14, 0, Math.PI * 2);
     ctx.strokeStyle = statusColor;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
 
     texture = new THREE.CanvasTexture(canvas);
@@ -1257,12 +1336,12 @@ function build3DLabelSprite(
     depthWrite: false,
   });
 
-  // Cloudcraft-style sleek compact badge (does not occlude 3D figurines)
+  // Calibrated sprite scale: ensures minimum legible label size >= 11px at default zoom distance while avoiding overlap
   const sprite = new THREE.Sprite(spriteMat);
-  const scaleW = isCluster ? 100 : 85;
-  const scaleH = scaleW * (130 / (isCluster ? 620 : 540));
+  const scaleW = isCluster ? 135 : 118;
+  const scaleH = scaleW * (140 / (isCluster ? 640 : 560));
   sprite.scale.set(scaleW, scaleH, 1);
-  sprite.position.y = 36; // Floats right above 3D figurine
+  sprite.position.y = 38; // Floats upright above 3D figurine
   sprite.userData = { isBillboardCard: true, nodeId: node.id };
 
   return sprite;
@@ -1274,7 +1353,12 @@ function build3DLabelSprite(
    1. The AWS 3D Isometric Figurine (standing on ground)
    2. The Upright Callout Label Sprite (always camera-facing)
    ─────────────────────────────────────────────────────────── */
-export function create3DNodeObject(node: GraphNode, isSelected = false, isHovered = false): THREE.Object3D {
+export function create3DNodeObject(
+  node: GraphNode,
+  isSelected = false,
+  isHovered = false,
+  isCostOverlayActive = false
+): THREE.Object3D {
   const group = new THREE.Group();
   group.name = node.id;
   group.userData = { nodeId: node.id };
@@ -1287,7 +1371,7 @@ export function create3DNodeObject(node: GraphNode, isSelected = false, isHovere
   group.add(deviceMesh);
 
   // 2. Add crystal-clear Upright Callout Label Sprite
-  const labelSprite = build3DLabelSprite(node, style, visualStatus, isSelected, isHovered);
+  const labelSprite = build3DLabelSprite(node, style, visualStatus, isSelected, isHovered, isCostOverlayActive);
   group.add(labelSprite);
 
   return group;

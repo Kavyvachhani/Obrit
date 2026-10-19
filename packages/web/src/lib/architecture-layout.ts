@@ -47,43 +47,44 @@ export function applyStructuredArchitectureLayout(
 } {
   // Deterministic positions for official AWS reference architecture
   const nodeMap: Record<string, { x: number; y: number; z: number; tier: number; az?: any }> = {
-    // ── Edge & Ingress Platform ──
-    "cf-prod-global-edge-cdn": { x: -840, y: -150, z: -160, tier: 0, az: "ingress" },
-    "apigw-prod-public-rest-api": { x: -840, y: 150, z: 160, tier: 0, az: "ingress" },
-    "igw-0998877665544332": { x: -580, y: -150, z: -160, tier: 0, az: "ingress" },
-    "sg-edge-alb": { x: -580, y: 150, z: 160, tier: 0, az: "ingress" },
+    // ── Edge & Ingress Platform (Tier 0) ──
+    "cf-prod-global-edge-cdn": { x: -840, y: -140, z: -140, tier: 0, az: "ingress" },
+    "apigw-prod-public-rest-api": { x: -840, y: 140, z: 140, tier: 0, az: "ingress" },
+    "igw-0998877665544332": { x: -580, y: -140, z: -140, tier: 0, az: "ingress" },
+    "sg-edge-alb": { x: -580, y: 140, z: 140, tier: 0, az: "ingress" },
 
-    // ── DMZ & Cross-AZ Ingress Corridor ──
-    "nat-05544332211009988": { x: -260, y: -150, z: -160, tier: 1, az: "us-east-1a" },
-    "alb-production-edge": { x: -260, y: 150, z: 160, tier: 1, az: "vpc" },
+    // ── DMZ & Ingress Corridor (Tier 1) ──
+    "nat-05544332211009988": { x: -260, y: -170, z: -170, tier: 1, az: "us-east-1a" },
+    "alb-production-edge": { x: -260, y: 130, z: 130, tier: 1, az: "vpc" },
 
-    // ── Private App Tier (Clean parallel lanes, perfectly centered in subnets) ──
-    "sg-internal-app": { x: -10, y: -150, z: -160, tier: 2, az: "us-east-1a" },
-    "i-091a2b3c4d5e6f701": { x: 235, y: -150, z: -160, tier: 2, az: "us-east-1a" },
-    "func-prod-auth-token-validator": { x: 470, y: -150, z: -160, tier: 2, az: "us-east-1a" },
-    "i-091a2b3c4d5e6f703": { x: 235, y: -50, z: -50, tier: 2, az: "us-east-1a" },
+    // ── Private App Tier: AZ 1a (Clean staggered coordinates, zero vertical/depth stacking) ──
+    "sg-internal-app": { x: 20, y: -190, z: -190, tier: 2, az: "us-east-1a" },
+    "i-091a2b3c4d5e6f701": { x: 180, y: -230, z: -230, tier: 2, az: "us-east-1a" },
+    "func-prod-auth-token-validator": { x: 330, y: -130, z: -130, tier: 2, az: "us-east-1a" },
+    "i-091a2b3c4d5e6f703": { x: 480, y: -230, z: -230, tier: 2, az: "us-east-1a" },
 
-    "tg-production-api": { x: -10, y: 150, z: 160, tier: 1, az: "us-east-1b" },
-    "i-091a2b3c4d5e6f702": { x: 235, y: 150, z: 160, tier: 2, az: "us-east-1b" },
-    "i-0demo1d1accessdenied": { x: 470, y: 150, z: 160, tier: 2, az: "us-east-1b" },
-    "ecs-prod-order-processor": { x: 235, y: 50, z: 50, tier: 2, az: "us-east-1b" },
+    // ── Private App Tier: AZ 1b (Staggered parallel corridor with ample clearance) ──
+    "tg-production-api": { x: 20, y: 130, z: 130, tier: 1, az: "us-east-1b" },
+    "i-091a2b3c4d5e6f702": { x: 180, y: 230, z: 230, tier: 2, az: "us-east-1b" },
+    "ecs-prod-order-processor": { x: 330, y: 130, z: 130, tier: 2, az: "us-east-1b" },
+    "i-0demo1d1accessdenied": { x: 480, y: 230, z: 230, tier: 2, az: "us-east-1b" },
 
     // ── Database Tier (Isolated in DB Subnets) ──
-    "db-prod-aurora-pg-primary": { x: 725, y: -150, z: -160, tier: 3, az: "us-east-1a" },
-    "db-prod-aurora-pg-replica-1b": { x: 725, y: 150, z: 160, tier: 3, az: "us-east-1b" },
+    "db-prod-aurora-pg-primary": { x: 730, y: -160, z: -160, tier: 3, az: "us-east-1a" },
+    "db-prod-aurora-pg-replica-1b": { x: 730, y: 160, z: 160, tier: 3, az: "us-east-1b" },
 
     // ── Distributed Storage & Messaging Platform (DynamoDB & SQS) ──
-    "dynamodb-prod-user-sessions": { x: 1055, y: -180, z: -180, tier: 4, az: "regional" },
-    "dynamodb-prod-orders-lake": { x: 1055, y: -60, z: -60, tier: 4, az: "regional" },
-    "sqs-prod-event-bus-fifo": { x: 1055, y: 60, z: 60, tier: 4, az: "regional" },
-    "sqs-prod-order-events-dlq": { x: 1055, y: 180, z: 180, tier: 4, az: "regional" },
+    "dynamodb-prod-user-sessions": { x: 1040, y: -180, z: -180, tier: 4, az: "regional" },
+    "dynamodb-prod-orders-lake": { x: 1040, y: -60, z: -60, tier: 4, az: "regional" },
+    "sqs-prod-event-bus-fifo": { x: 1040, y: 60, z: 60, tier: 4, az: "regional" },
+    "sqs-prod-order-events-dlq": { x: 1040, y: 180, z: 180, tier: 4, az: "regional" },
 
     // ── Regional & Storage Fabric (S3, Lambda, IAM, SNS) ──
-    "sns-prod-security-alerts": { x: 1355, y: -200, z: -200, tier: 4, az: "regional" },
-    "s3-prod-static-distribution-cdn": { x: 1355, y: -90, z: -90, tier: 4, az: "regional" },
-    "s3-prod-telemetry-data-lake": { x: 1355, y: 20, z: 20, tier: 4, az: "regional" },
-    "func-prod-event-pipeline-consumer": { x: 1355, y: 130, z: 130, tier: 4, az: "regional" },
-    "role-ec2-ssm-s3-access": { x: 1355, y: 240, z: 240, tier: 4, az: "regional" },
+    "sns-prod-security-alerts": { x: 1280, y: -200, z: -200, tier: 4, az: "regional" },
+    "s3-prod-static-distribution-cdn": { x: 1280, y: -90, z: -90, tier: 4, az: "regional" },
+    "s3-prod-telemetry-data-lake": { x: 1280, y: 20, z: 20, tier: 4, az: "regional" },
+    "func-prod-event-pipeline-consumer": { x: 1280, y: 130, z: 130, tier: 4, az: "regional" },
+    "role-ec2-ssm-s3-access": { x: 1280, y: 240, z: 240, tier: 4, az: "regional" },
   };
 
   const positionedNodes: PositionedNode[] = [];
@@ -801,7 +802,7 @@ export function resolveNodeCollisions(
   _minDistance = 80
 ): PositionedNode[] {
   const minSepX = is3D ? 165 : 200;
-  const minSepY = is3D ? 75 : 75;
+  const minSepY = is3D ? 95 : 85;
   const iterations = 20;
 
   for (let iter = 0; iter < iterations; iter++) {

@@ -1,6 +1,7 @@
 import {
   CostExplorerClient,
   GetCostAndUsageCommand,
+  GetCostForecastCommand,
 } from "@aws-sdk/client-cost-explorer";
 import { awsReadOnlyCall } from "../read-only-call.js";
 import { withRateLimit } from "../rate-limiter.js";
@@ -117,4 +118,156 @@ export function findUnplannedServices(
   }
 
   return Array.from(unplanned);
+}
+
+export interface ServiceCostSummary {
+  serviceName: string;
+  shortName: string;
+  mtdCost: number;
+  estimatedMonthEndCost: number;
+  resourcePrefixes: string[];
+}
+
+export interface BillingDataResult {
+  available: boolean;
+  reason?: string;
+  currency?: string;
+  monthToDateTotal?: number;
+  estimatedMonthEndTotal?: number;
+  services?: ServiceCostSummary[];
+}
+
+/**
+ * Retrieve current month-to-date cost and estimated month-end total per service.
+ * Requires optional ce:GetCostAndUsage and ce:GetCostForecast permissions.
+ * If not granted, returns { available: false } cleanly without erroring.
+ */
+export async function getBillingDataAndForecast(
+  client: CostExplorerClient,
+  accountId: string
+): Promise<BillingDataResult> {
+  try {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth(); // 0-indexed
+    const day = now.getUTCDate();
+
+    const mtdStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const mtdEnd = tomorrow.toISOString().split("T")[0];
+
+    // 1. Month-to-date spend grouped by service
+    const usageResponse = await withRateLimit("ce", () =>
+      awsReadOnlyCall<{
+        ResultsByTime?: Array<{
+          Groups?: Array<{
+            Keys?: string[];
+            Metrics?: {
+              UnblendedCost?: { Amount?: string };
+            };
+          }>;
+        }>;
+      }>(
+        client,
+        new GetCostAndUsageCommand({
+          TimePeriod: { Start: mtdStart, End: mtdEnd },
+          Granularity: "MONTHLY",
+          Metrics: ["UnblendedCost"],
+          GroupBy: [{ Type: "DIMENSION", Key: "SERVICE" }],
+        }),
+        "ce",
+        accountId
+      )
+    );
+
+    const serviceMap = new Map<string, { mtdCost: number; shortName: string; prefixes: string[] }>();
+    let mtdTotal = 0;
+
+    for (const timeBlock of usageResponse.ResultsByTime || []) {
+      for (const group of timeBlock.Groups || []) {
+        const rawServiceName = group.Keys?.[0] || "Other";
+        const cost = parseFloat(group.Metrics?.UnblendedCost?.Amount || "0");
+        if (cost <= 0) continue;
+
+        mtdTotal += cost;
+        const norm = SERVICE_NORMALIZATION[rawServiceName] || {
+          shortName: rawServiceName.replace(/^(Amazon|AWS)\s+/i, ""),
+          resourcePrefixes: [],
+        };
+
+        const existing = serviceMap.get(rawServiceName) || {
+          mtdCost: 0,
+          shortName: norm.shortName,
+          prefixes: norm.resourcePrefixes,
+        };
+        existing.mtdCost += cost;
+        serviceMap.set(rawServiceName, existing);
+      }
+    }
+
+    // 2. Month-end forecast
+    let estimatedTotal = mtdTotal;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysRemaining = Math.max(1, daysInMonth - day);
+
+    try {
+      const nextMonthYear = month === 11 ? year + 1 : year;
+      const nextMonthNum = month === 11 ? 1 : month + 2;
+      const forecastEnd = `${nextMonthYear}-${String(nextMonthNum).padStart(2, "0")}-01`;
+
+      const forecastResponse = await withRateLimit("ce", () =>
+        awsReadOnlyCall<{
+          Total?: { Amount?: string };
+        }>(
+          client,
+          new GetCostForecastCommand({
+            TimePeriod: { Start: mtdEnd, End: forecastEnd },
+            Metric: "UNBLENDED_COST",
+            Granularity: "MONTHLY",
+          }),
+          "ce",
+          accountId
+        )
+      );
+
+      const forecastRemaining = parseFloat(forecastResponse.Total?.Amount || "0");
+      estimatedTotal = mtdTotal + forecastRemaining;
+    } catch (fcErr) {
+      // Fallback: simple linear run-rate projection if forecast API lacks history
+      logger.debug({ accountId, fcErr }, "ce:GetCostForecast unavailable; falling back to linear run-rate");
+      const currentDay = Math.max(1, day);
+      estimatedTotal = (mtdTotal / currentDay) * daysInMonth;
+    }
+
+    // Distribute estimated forecast across services based on current share
+    const services: ServiceCostSummary[] = [];
+    const ratio = mtdTotal > 0 ? estimatedTotal / mtdTotal : 1;
+
+    for (const [rawName, data] of serviceMap.entries()) {
+      services.push({
+        serviceName: rawName,
+        shortName: data.shortName,
+        mtdCost: parseFloat(data.mtdCost.toFixed(2)),
+        estimatedMonthEndCost: parseFloat((data.mtdCost * ratio).toFixed(2)),
+        resourcePrefixes: data.prefixes,
+      });
+    }
+
+    services.sort((a, b) => b.mtdCost - a.mtdCost);
+
+    return {
+      available: true,
+      currency: "USD",
+      monthToDateTotal: parseFloat(mtdTotal.toFixed(2)),
+      estimatedMonthEndTotal: parseFloat(estimatedTotal.toFixed(2)),
+      services,
+    };
+  } catch (err: any) {
+    const errName = err?.name || "AccessDenied";
+    logger.info({ accountId, errName }, "Optional Cost Explorer billing access not granted");
+    return {
+      available: false,
+      reason: "Optional Cost Explorer permissions (ce:GetCostAndUsage, ce:GetCostForecast) not granted on this account.",
+    };
+  }
 }
